@@ -1,8 +1,10 @@
 import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import React from "react";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import Colors from "@/constants/Colors";
-import { NAV_TABS } from "@/constants/AppConfig";
+import { TabBarIcon } from "@/components/navigation/TabBarIcon";
+import { BlurView } from "expo-blur";
+import { StyleSheet } from "react-native";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -12,52 +14,100 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.tabIconDefault,
+        tabBarInactiveTintColor: colors.onSurfaceVariant,
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.cardBorder,
-          borderTopWidth: 1,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 88,
+          position: "absolute",
+          borderTopWidth: 0,
+          elevation: 0, // for Android
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "600",
-          marginTop: 4,
-        },
-        headerStyle: {
-          backgroundColor: colors.background,
-        },
-        headerTintColor: colors.text,
-        headerTitleStyle: {
-          fontWeight: "600",
-        },
+        tabBarBackground: () => (
+          <BlurView
+            intensity={90}
+            tint={colorScheme === "dark" ? "dark" : "light"}
+            style={StyleSheet.absoluteFill}
+          />
+        ),
       }}
     >
-      {/* This automatically maps all tabs from your AppConfig, including the new Heart Rate tab */}
-      {NAV_TABS.map((tab) => (
-        <Tabs.Screen
-          key={tab.id}
-          name={tab.id}
-          options={{
-            title: tab.title,
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={tab.icon} size={size} color={color} />
-            ),
-            headerShown: tab.id !== "home", // Hide header only for the home screen
-          }}
-        />
-      ))}
-
-      {/* These screens are part of the tabs stack but are not visible on the tab bar */}
+      {/* --- VISIBLE TABS --- */}
       <Tabs.Screen
-        name="skinScanResult"
-        options={{ href: null, headerShown: false }}
+        name="home"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? "home" : "home-outline"}
+              color={color}
+            />
+          ),
+        }}
       />
       <Tabs.Screen
-        name="prescriptionResult"
-        options={{ href: null, headerShown: false }}
+        name="health"
+        options={{
+          title: "Health",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? "heart" : "heart-outline"}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="assistant"
+        options={{
+          title: "Assistant",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? "sparkles" : "sparkles-outline"}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="alerts"
+        options={{
+          title: "Alerts",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? "notifications" : "notifications-outline"}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? "person" : "person-outline"}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* --- HIDDEN SCREENS (for navigation) --- */}
+      <Tabs.Screen name="skinScan" options={{ href: null }} />
+      <Tabs.Screen name="prescriptionScanner" options={{ href: null }} />
+      <Tabs.Screen name="heartRateMonitor" options={{ href: null }} />
+      <Tabs.Screen name="medPlanner" options={{ href: null }} />
+      <Tabs.Screen name="skinScanResult" options={{ href: null }} />
+      <Tabs.Screen name="prescriptionResult" options={{ href: null }} />
+
+      {/* --- MODAL SCREEN REGISTRATION --- */}
+      {/* This single line registers your modal screen with the tabs navigator */}
+      <Tabs.Screen
+        name="../add-medication"
+        options={{
+          presentation: "modal",
+          headerShown: false,
+        }}
       />
     </Tabs>
   );

@@ -12,7 +12,6 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
-  FlatList,
   Image,
   ScrollView,
   StyleSheet,
@@ -23,11 +22,12 @@ import {
 } from "react-native";
 
 // --- Hooks and Services ---
-import { useAuth } from "../../hooks/useAuth";
-import { useBLE } from "../../contexts/BLEContext";
-import { useLocation } from "../../hooks/useLocation";
-import { fetchEnvironmentalData } from "../../services/api";
-import { useColorScheme } from "../../hooks/useColorScheme";
+import { useAuth } from "@/hooks/useAuth";
+import { useBLE } from "@/contexts/BLEContext";
+import { useLocation } from "@/hooks/useLocation";
+import { usePedometer } from "@/hooks/usePedometer";
+import { fetchEnvironmentalData, EnvironmentalData } from "@/services/api";
+import { useColorScheme } from "@/hooks/useColorScheme";
 
 // --- UI Components and Constants ---
 import { InfoCard } from "../../components/ui/InfoCard";
@@ -39,78 +39,96 @@ import Colors, { gradients, moduleColors } from "../../constants/Colors";
 
 const { width } = Dimensions.get("window");
 
-// Define the shape of our data and warnings
-type EnvironmentalData = {
-  aqi: number;
-  co: number;
-  o3: number;
-  pm2_5: number;
-  [key: string]: any; // Allow other properties
-};
-
 type Warning = {
   id: string;
   icon: keyof typeof Ionicons.glyphMap;
   message: string;
 };
 
+// --- MOCK DATA for Development (Fallback) ---
+const MOCK_ENV_DATA: EnvironmentalData = {
+  aqi: 151,
+  temp: 25,
+  uv: 8,
+  weather: "hazy",
+  rain: false,
+};
+
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "dark"];
+
+  // --- Filtered Quick Actions ---
+  const VISIBLE_QUICK_ACTIONS = QUICK_ACTIONS.filter((action) =>
+    ["scanSkin", "verifyRx", "medPlanner"].includes(action.id)
+  );
 
   // --- State Management ---
   const { session, loading: authLoading } = useAuth();
   const { connectedDevice, heartRate } = useBLE();
   const { location, loading: locationLoading } = useLocation();
+  const { pastStepCount } = usePedometer();
 
   const [envData, setEnvData] = useState<EnvironmentalData | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // --- Animation & UI State ---
-  const [currentTipIndex, setCurrentTipIndex] = useState(0);
-  const carouselRef = useRef<FlatList>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
+  //  Logic to get unique daily health tips ---
+  const dailyHealthTips = useMemo(() => {
+    const date = new Date();
+    const dayOfYear = Math.floor(
+      (date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    const shuffledTips = [...MOCK_DATA.healthTips].sort((a, b) => {
+      const aVal =
+        (parseInt(a.id, 10) * dayOfYear) % MOCK_DATA.healthTips.length;
+      const bVal =
+        (parseInt(b.id, 10) * dayOfYear) % MOCK_DATA.healthTips.length;
+      return aVal - bVal;
+    });
+
+    // Return the first 6 tips for the day
+    return shuffledTips.slice(0, 6);
+  }, []);
+
   // --- Data Fetching Logic ---
   const loadApiData = useCallback(async () => {
-    // Guard clauses: only fetch if logged in and location is available
-    if (!session || !location) {
-      if (!session) setError("Please log in to view your health data.");
-      setDataLoading(false);
-      return;
-    }
-
-    try {
-      setDataLoading(true);
-      setError(null);
-      const data = await fetchEnvironmentalData();
-      setEnvData(data);
-    } catch (err) {
-      console.error("Failed to load home screen API data:", err);
-      setError("Failed to fetch environmental data.");
-    } finally {
+    if (session && location) {
+      try {
+        setDataLoading(true);
+        const data = await fetchEnvironmentalData(location);
+        setEnvData(data);
+      } catch (err) {
+        console.error("Failed to load real API data:", err);
+        setEnvData(MOCK_ENV_DATA);
+      } finally {
+        setDataLoading(false);
+      }
+    } else {
+      console.log("Bypassing login: Loading mock data for development.");
+      setEnvData(MOCK_ENV_DATA);
       setDataLoading(false);
     }
-  }, [session, location]); // Dependencies for the callback
+  }, [session, location]);
 
-  // Effect to trigger data loading when auth and location are ready
   useEffect(() => {
     if (!authLoading && !locationLoading) {
       loadApiData();
     }
   }, [authLoading, locationLoading, loadApiData]);
 
-  // Handler for pull-to-refresh
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadApiData().then(() => setRefreshing(false));
   }, [loadApiData]);
 
-  // Effect to start UI animations on component mount
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -132,70 +150,104 @@ export default function HomeScreen() {
     ]).start();
   }, []);
 
-  // Memoized calculation to generate warnings based on fetched data
   const warnings = useMemo((): Warning[] => {
     const newWarnings: Warning[] = [];
     if (!envData) return [];
-    if (envData.aqi >= 4) {
-      // AQI 4 is 'Poor'
+    if (envData.aqi > 100) {
       newWarnings.push({
         id: "aqi",
         icon: "cloud-outline",
-        message: `Poor Air Quality (AQI: ${envData.aqi}). Limit outdoor activity.`,
+        message: "Bad AQI - Wear a mask",
       });
     }
-    if (envData.pm2_5 > 35) {
-      // High PM2.5 concentration
+    if (envData.temp > 35) {
       newWarnings.push({
-        id: "pm25",
-        icon: "warning-outline",
-        message: "High PM2.5 levels. Consider wearing a mask.",
+        id: "temp",
+        icon: "thermometer-outline",
+        message: "High Temp - Stay hydrated",
       });
     }
-    if (envData.o3 > 180) {
-      // High Ozone concentration
+    if (envData.uv > 6) {
       newWarnings.push({
-        id: "o3",
-        icon: "shield-outline",
-        message: "High Ozone levels detected.",
+        id: "uv",
+        icon: "sunny-outline",
+        message: "High UV Index - Use sunscreen",
+      });
+    }
+    if (envData.rain) {
+      newWarnings.push({
+        id: "rain",
+        icon: "rainy-outline",
+        message: "Chance of Rain - Carry umbrella",
       });
     }
     return newWarnings;
   }, [envData]);
 
-  // --- Navigation Handlers ---
   const handleQuickAction = (actionId: string) => {
     const action = QUICK_ACTIONS.find((a) => a.id === actionId);
     if (action) router.push(action.module as any);
   };
 
+  // --- THIS IS THE FIX ---
   const handleModulePress = (moduleId: string) => {
-    router.push(`/modules/${moduleId}`);
+    // If the user clicks the Med Planner, go directly to the functional screen
+    if (moduleId === "medPlanner") {
+      router.push("/(tabs)/medPlanner");
+    } else {
+      // For all other modules, go to the descriptive page
+      router.push(`/modules/${moduleId}`);
+    }
   };
 
-  // --- Render Functions ---
-  // (renderHealthTip, renderModuleCard, etc. would go here, same as your provided code)
-  // To keep the response concise, these detailed render functions are omitted,
-  // but they should be copied over from your provided file.
-  // For this example, we'll focus on the main return block and its logic.
-
-  // Main loading state while checking auth or location
-  if (authLoading || locationLoading) {
-    return (
-      <View
-        style={[
-          styles.container,
-          styles.centerContainer,
-          { backgroundColor: colors.background },
-        ]}
+  const renderModuleCard = ({ item }: { item: any }) => (
+    <Animated.View
+      style={[
+        styles.moduleCardContainer,
+        {
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+        },
+      ]}
+    >
+      <TouchableOpacity
+        style={styles.moduleCard}
+        onPress={() => handleModulePress(item.id)}
+        activeOpacity={0.8}
       >
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.subtitle, { color: colors.text }]}>
-          {authLoading ? "Authenticating..." : "Getting location..."}
-        </Text>
-      </View>
-    );
-  }
+        <LinearGradient
+          colors={
+            moduleColors[item.id as keyof typeof moduleColors]?.gradient ||
+            gradients.primary
+          }
+          style={styles.moduleGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.moduleContent}>
+            <View style={styles.moduleIconContainer}>
+              <Ionicons name={item.icon as any} size={32} color={colors.text} />
+            </View>
+            <Text
+              style={[styles.moduleTitle, { color: colors.text }]}
+              numberOfLines={2}
+            >
+              {item.name}
+            </Text>
+            <Text
+              style={[
+                styles.moduleSubtitle,
+                { color: colors.onSurfaceVariant },
+              ]}
+              numberOfLines={1}
+            >
+              {item.subtitle}
+            </Text>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
 
   return (
     <ScrollView
@@ -225,7 +277,7 @@ export default function HomeScreen() {
         >
           <View style={styles.greetingContainer}>
             <Text style={[styles.greeting, { color: colors.text }]}>
-              Good morning, {session?.user?.email?.split("@")[0] || "Guest"} ✨
+              Good morning, {session ? MOCK_DATA.user.name : "Guest"} ✨
             </Text>
             <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
               Ready to take care of your health today?
@@ -254,16 +306,12 @@ export default function HomeScreen() {
           },
         ]}
       >
-        {dataLoading ? (
+        {dataLoading || locationLoading ? (
           <ActivityIndicator
             size="large"
             color={colors.primary}
             style={{ height: 250 }}
           />
-        ) : error ? (
-          <View style={[styles.infoCardError, { height: 250 }]}>
-            <Text style={{ color: colors.error }}>{error}</Text>
-          </View>
         ) : (
           <>
             <View style={styles.cardRow}>
@@ -275,31 +323,23 @@ export default function HomeScreen() {
                 gradient={["#FF5757", "#FF2E2E"]}
               />
               <InfoCard
-                icon="leaf-outline"
-                label="AQI / O₃"
-                value={
-                  envData ? `${envData.aqi} / ${envData.o3.toFixed(0)}` : "--"
-                }
-                unit="μg/m³"
+                icon="thermometer-outline"
+                label="Temp & AQI"
+                value={envData ? `${envData.temp}°c / ${envData.aqi}` : "--"}
                 gradient={["#FFA500", "#FF8C00"]}
               />
             </View>
             <View style={styles.cardRow}>
               <InfoCard
-                icon="warning-outline"
-                label="CO / PM2.5"
-                value={
-                  envData
-                    ? `${envData.co.toFixed(0)} / ${envData.pm2_5.toFixed(0)}`
-                    : "--"
-                }
-                unit="μg/m³"
+                icon="sunny-outline"
+                label="UV & Weather"
+                value={envData ? `${envData.uv} / ${envData.weather}` : "N/A"}
                 gradient={["#FFD700", "#FFC300"]}
               />
               <InfoCard
                 icon="walk-outline"
                 label="Steps Today"
-                value={4521}
+                value={pastStepCount > 0 ? pastStepCount : "--"}
                 unit="steps"
                 gradient={["#57C5FF", "#2E9AFE"]}
               />
@@ -310,8 +350,6 @@ export default function HomeScreen() {
 
       <WarningScroller warnings={warnings} />
 
-      {/* --- Other UI Sections (Quick Actions, Modules, Tips) --- */}
-      {/* These sections would be included here, using the same structure from your provided code */}
       <Animated.View
         style={[
           styles.section,
@@ -322,25 +360,135 @@ export default function HomeScreen() {
           Quick Actions
         </Text>
         <View style={styles.quickActionsContainer}>
-          {QUICK_ACTIONS.map((action) => (
+          {VISIBLE_QUICK_ACTIONS.map((action) => (
             <QuickActionButton
               key={action.id}
-              actionId={action.id}
+              action={action}
               onPress={() => handleQuickAction(action.id)}
               style={styles.quickAction}
             />
           ))}
         </View>
       </Animated.View>
+
+      {/* --- RESTORED SECTIONS --- */}
+      <Animated.View
+        style={[
+          styles.section,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Health Modules
+        </Text>
+        <View style={styles.modulesGrid}>
+          {Object.values(MODULES).map((module) => (
+            <View key={module.id} style={styles.moduleGridItem}>
+              {renderModuleCard({ item: module })}
+            </View>
+          ))}
+        </View>
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.section,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Daily Health Tips
+        </Text>
+        <View style={styles.tipsListContainer}>
+          {dailyHealthTips.map((tip) => (
+            <View
+              key={tip.id}
+              style={[
+                styles.tipItemCard,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
+            >
+              <Ionicons
+                name={tip.icon as any}
+                size={22}
+                color={colors.primary}
+                style={styles.tipItemIcon}
+              />
+              <Text style={[styles.tipItemText, { color: colors.text }]}>
+                {tip.title}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.section,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Recent Activity
+        </Text>
+        <GlassCard style={styles.activityCard} gradient>
+          <View style={styles.activityItem}>
+            <View
+              style={[
+                styles.activityIcon,
+                { backgroundColor: colors.primary + "20" },
+              ]}
+            >
+              <Ionicons name="camera" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.activityContent}>
+              <Text style={[styles.activityTitle, { color: colors.text }]}>
+                Skin scan completed
+              </Text>
+              <Text
+                style={[
+                  styles.activityTime,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                2 hours ago
+              </Text>
+            </View>
+          </View>
+          <View style={styles.activityItem}>
+            <View
+              style={[
+                styles.activityIcon,
+                { backgroundColor: colors.secondary + "20" },
+              ]}
+            >
+              <Ionicons name="heart" size={20} color={colors.secondary} />
+            </View>
+            <View style={styles.activityContent}>
+              <Text style={[styles.activityTitle, { color: colors.text }]}>
+                Mood check-in
+              </Text>
+              <Text
+                style={[
+                  styles.activityTime,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                Yesterday
+              </Text>
+            </View>
+          </View>
+        </GlassCard>
+      </Animated.View>
     </ScrollView>
   );
 }
 
-// NOTE: Please reuse the extensive stylesheet from your provided code.
-// A simplified version is included here for completeness.
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  centerContainer: { justifyContent: "center", alignItems: "center" },
   contentContainer: { paddingBottom: 100 },
   header: {
     paddingTop: 60,
@@ -377,23 +525,85 @@ const styles = StyleSheet.create({
     borderColor: "#FFFFFF",
   },
   section: { paddingHorizontal: 24, marginTop: 32 },
-  sectionTitle: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
-  infoCardError: {
-    justifyContent: "center",
-    alignItems: "center",
+  sectionTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 16 },
+  quickActionsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    gap: 16,
   },
+  quickAction: { flex: 1 },
   cardRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
     marginBottom: 16,
   },
-  quickActionsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    gap: 16,
+  modulesGrid: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
+  moduleGridItem: { width: (width - 64) / 2 },
+  moduleCardContainer: { width: "100%" },
+  moduleCard: {
+    width: "100%",
+    height: 160,
+    borderRadius: 24,
+    overflow: "hidden",
   },
-  quickAction: {
+  moduleGradient: {
     flex: 1,
+    padding: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
+  moduleContent: { alignItems: "center" },
+  moduleIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  moduleTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  moduleSubtitle: { fontSize: 12, textAlign: "center", opacity: 0.8 },
+  tipsListContainer: {
+    gap: 12,
+  },
+  tipItemCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  tipItemIcon: {
+    marginRight: 16,
+  },
+  tipItemText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 20,
+  },
+  activityCard: { padding: 20 },
+  activityItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  activityIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  activityContent: { flex: 1 },
+  activityTitle: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
+  activityTime: { fontSize: 14, opacity: 0.7 },
 });

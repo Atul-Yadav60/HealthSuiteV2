@@ -8,71 +8,115 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  ActivityIndicator,
   Platform,
 } from "react-native";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 
 import { GradientButton } from "@/components/ui/GradientButton";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { supabase } from "@/lib/supabase";
-import { useAuth } from "@/hooks/useAuth";
+import { scheduleMedicationReminder } from "@/services/NotificationService";
 
 export default function AddMedicationScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "dark"];
-  const { session } = useAuth();
 
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
-  const [times, setTimes] = useState<string[]>(["08:00"]); // Default to one time
+  const [schedule, setSchedule] = useState<Date[]>([new Date()]);
   const [loading, setLoading] = useState(false);
 
+  const [pickerState, setPickerState] = useState<{
+    show: boolean;
+    mode: "date" | "time";
+    index: number;
+  }>({ show: false, mode: "date", index: 0 });
+
   const handleSaveMedication = async () => {
-    if (!name || times.length === 0) {
+    // --- DEVELOPMENT ONLY ---
+    // PASTE YOUR TEST USER ID FROM THE SUPABASE DASHBOARD INSIDE THE QUOTES
+    const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
+    // --- END DEVELOPMENT ONLY ---
+
+    if (!testUserID || testUserID === "511e52f8-0977-43e0-a7a4-b8cdb1c49eba") {
       Alert.alert(
-        "Missing Information",
-        "Please enter the medication name and at least one time."
+        "Configuration Error",
+        "Please set your Test User ID in app/add-medication.tsx"
       );
       return;
     }
-    if (!session?.user) {
+
+    if (!name || schedule.length === 0) {
       Alert.alert(
-        "Not Authenticated",
-        "You must be logged in to add medication."
+        "Missing Information",
+        "Please enter the medication name and at least one date and time."
+      );
+      return;
+    }
+
+    const now = new Date();
+    if (schedule.some((date) => date <= now)) {
+      Alert.alert(
+        "Invalid Time",
+        "Please ensure all reminder times are set in the future."
       );
       return;
     }
 
     setLoading(true);
     try {
+      const scheduleISOStrings = schedule.map((date) => date.toISOString());
+
       const { error } = await supabase.from("medications").insert({
-        user_id: session.user.id,
+        user_id: testUserID,
         name: name.trim(),
         dosage: dosage.trim(),
-        schedule: { type: "daily", times: times },
+        schedule: { type: "specific", times: scheduleISOStrings },
       });
 
       if (error) throw error;
 
-      Alert.alert("Success", "Medication added to your planner.");
-      router.back(); // Close the modal on success
-    } catch (error) {
+      for (const date of schedule) {
+        await scheduleMedicationReminder(
+          { name: name.trim(), dosage: dosage.trim() },
+          date
+        );
+      }
+
+      Alert.alert("Success", "Medication added and reminders scheduled.");
+      router.back();
+    } catch (error: any) {
       console.error("Error saving medication:", error);
-      Alert.alert("Error", "Failed to save medication. Please try again.");
+      Alert.alert("Error", `Failed to save medication. ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const addTimeToSchedule = () => {
-    // In a real app, you would use a time picker here.
-    // For simplicity, we'll add a default time.
-    setTimes([...times, "20:00"]);
+  const onPickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const currentDate = selectedDate || schedule[pickerState.index];
+    setPickerState({ ...pickerState, show: false });
+
+    if (event.type === "set") {
+      const newSchedule = [...schedule];
+      newSchedule[pickerState.index] = currentDate;
+      setSchedule(newSchedule);
+    }
   };
 
-  const removeTimeFromSchedule = (indexToRemove: number) => {
-    setTimes(times.filter((_, index) => index !== indexToRemove));
+  const showPicker = (index: number, mode: "date" | "time") => {
+    setPickerState({ show: true, mode, index });
+  };
+
+  const addScheduleItem = () => {
+    setSchedule([...schedule, new Date()]);
+  };
+
+  const removeScheduleItem = (indexToRemove: number) => {
+    setSchedule(schedule.filter((_, index) => index !== indexToRemove));
   };
 
   return (
@@ -92,7 +136,6 @@ export default function AddMedicationScreen() {
           />
         </TouchableOpacity>
       </View>
-
       <View style={styles.form}>
         <Text style={[styles.label, { color: colors.text }]}>
           Medication Name
@@ -111,7 +154,6 @@ export default function AddMedicationScreen() {
           value={name}
           onChangeText={setName}
         />
-
         <Text style={[styles.label, { color: colors.text }]}>
           Dosage (Optional)
         </Text>
@@ -129,17 +171,37 @@ export default function AddMedicationScreen() {
           value={dosage}
           onChangeText={setDosage}
         />
-
         <Text style={[styles.label, { color: colors.text }]}>
           Reminder Times
         </Text>
-        {times.map((time, index) => (
+        {schedule.map((date, index) => (
           <View key={index} style={styles.timeRow}>
-            <Ionicons name="alarm-outline" size={24} color={colors.primary} />
-            <Text style={[styles.timeText, { color: colors.text }]}>
-              {time}
-            </Text>
-            <TouchableOpacity onPress={() => removeTimeFromSchedule(index)}>
+            <TouchableOpacity
+              onPress={() => showPicker(index, "date")}
+              style={styles.dateButton}
+            >
+              <Ionicons
+                name="calendar-outline"
+                size={24}
+                color={colors.primary}
+              />
+              <Text style={[styles.timeText, { color: colors.text }]}>
+                {date.toLocaleDateString()}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => showPicker(index, "time")}
+              style={styles.timeButton}
+            >
+              <Ionicons name="alarm-outline" size={24} color={colors.primary} />
+              <Text style={[styles.timeText, { color: colors.text }]}>
+                {date.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => removeScheduleItem(index)}>
               <Ionicons
                 name="remove-circle-outline"
                 size={24}
@@ -149,26 +211,34 @@ export default function AddMedicationScreen() {
           </View>
         ))}
         <TouchableOpacity
-          style={styles.addTimeButton}
-          onPress={addTimeToSchedule}
+          style={[styles.addTimeButton, { borderColor: colors.outline }]}
+          onPress={addScheduleItem}
         >
           <Ionicons
             name="add-circle-outline"
             size={20}
             color={colors.primary}
           />
+          {/* This was the line with the typo. It is now fixed. */}
           <Text style={[styles.addTimeText, { color: colors.primary }]}>
             Add another time
           </Text>
         </TouchableOpacity>
       </View>
-
+      {pickerState.show && (
+        <DateTimePicker
+          value={schedule[pickerState.index]}
+          mode={pickerState.mode}
+          is24Hour={true}
+          display="default"
+          onChange={onPickerChange}
+        />
+      )}
       <View style={styles.footer}>
         <GradientButton
           title="Save Medication"
           onPress={handleSaveMedication}
           loading={loading}
-          icon="save-outline"
         />
       </View>
     </View>
@@ -176,9 +246,7 @@ export default function AddMedicationScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -187,22 +255,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-  },
-  closeButton: {
-    padding: 4,
-  },
-  form: {
-    flex: 1,
-    padding: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 8,
-  },
+  title: { fontSize: 28, fontWeight: "bold" },
+  closeButton: { padding: 4 },
+  form: { flex: 1, padding: 24 },
+  label: { fontSize: 16, fontWeight: "500", marginBottom: 8 },
   input: {
     height: 50,
     borderWidth: 1,
@@ -214,14 +270,13 @@ const styles = StyleSheet.create({
   timeRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
     marginBottom: 8,
   },
-  timeText: {
-    flex: 1,
-    fontSize: 18,
-    marginLeft: 16,
-  },
+  dateButton: { flexDirection: "row", alignItems: "center" },
+  timeButton: { flexDirection: "row", alignItems: "center" },
+  timeText: { fontSize: 18, marginLeft: 8 },
   addTimeButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -230,16 +285,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#999",
     marginTop: 8,
   },
-  addTimeText: {
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  footer: {
-    padding: 24,
-    paddingBottom: 40,
-  },
+  addTimeText: { marginLeft: 8, fontSize: 16, fontWeight: "600" },
+  footer: { padding: 24, paddingBottom: 40 },
 });

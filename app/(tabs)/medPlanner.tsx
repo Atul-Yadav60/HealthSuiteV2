@@ -1,41 +1,154 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  FlatList,
+  ActivityIndicator,
+  Alert,
+  Platform,
 } from "react-native";
 
 import { GradientButton } from "@/components/ui/GradientButton";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
+import { supabase } from "@/lib/supabase";
+import { scheduleMedicationReminder } from "@/services/NotificationService";
+import * as Notifications from "expo-notifications";
+
+interface Medication {
+  id: string;
+  name: string;
+  dosage: string;
+  schedule: {
+    type: string;
+    times: string[];
+  };
+}
 
 export default function MedPlannerScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "dark"];
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // This will hold the user's medications in a future step
-  const [medications, setMedications] = React.useState([]);
+  const fetchAndScheduleMedications = useCallback(async () => {
+    // --- DEVELOPMENT ONLY ---
+    // PASTE YOUR TEST USER ID FROM THE SUPABASE DASHBOARD HERE
+    const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
+    // --- END DEVELOPMENT ONLY ---
+
+    if (!testUserID) {
+      Alert.alert(
+        "Configuration Error",
+        "Please set your Test User ID in app/(tabs)/medPlanner.tsx"
+      );
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("medications")
+        .select("*")
+        .eq("user_id", testUserID) // Use the Test User ID
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      const upcomingMedications = (data || []).filter((med) =>
+        med.schedule.times.some((time: string) => new Date(time) > new Date())
+      );
+      setMedications(upcomingMedications);
+
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      console.log(
+        "Cleared old notifications. Rescheduling upcoming reminders..."
+      );
+
+      for (const med of upcomingMedications) {
+        for (const time of med.schedule.times) {
+          if (new Date(time) > new Date()) {
+            await scheduleMedicationReminder(
+              { name: med.name, dosage: med.dosage },
+              new Date(time)
+            );
+          }
+        }
+      }
+    } catch (error: any) {
+      Alert.alert("Error", "Failed to fetch medications: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchAndScheduleMedications();
+    }, [fetchAndScheduleMedications])
+  );
+
+  const renderMedicationItem = ({ item }: { item: Medication }) => (
+    <View
+      style={[
+        styles.medicationItem,
+        { backgroundColor: colors.surface, borderColor: colors.outline },
+      ]}
+    >
+      <Ionicons
+        name="medkit-outline"
+        size={32}
+        color={colors.primary}
+        style={styles.medIcon}
+      />
+      <View style={styles.medicationInfo}>
+        <Text style={[styles.medicationName, { color: colors.text }]}>
+          {item.name}
+        </Text>
+        <Text
+          style={[styles.medicationDosage, { color: colors.onSurfaceVariant }]}
+        >
+          {item.dosage || "No dosage"}
+        </Text>
+      </View>
+      <View style={styles.medicationSchedule}>
+        {item.schedule.times
+          .filter((t) => new Date(t) > new Date())
+          .map((time, index) => (
+            <Text
+              key={index}
+              style={[styles.scheduleText, { color: colors.onSurfaceVariant }]}
+            >
+              {new Date(time).toLocaleDateString()} at{" "}
+              {new Date(time).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </Text>
+          ))}
+      </View>
+    </View>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.outline }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>
           Medication Planner
         </Text>
       </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {medications.length === 0 ? (
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : medications.length === 0 ? (
+        <ScrollView contentContainerStyle={styles.centered}>
           <View style={styles.emptyStateContainer}>
             <Ionicons
               name="medkit-outline"
@@ -43,7 +156,7 @@ export default function MedPlannerScreen() {
               color={colors.onSurfaceVariant}
             />
             <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-              No Medications Scheduled
+              No Upcoming Medications
             </Text>
             <Text
               style={[
@@ -51,24 +164,22 @@ export default function MedPlannerScreen() {
                 { color: colors.onSurfaceVariant },
               ]}
             >
-              Tap 'Add Medication' to get started and never miss a dose.
+              Tap 'Add Medication' to get started.
             </Text>
           </View>
-        ) : (
-          <View>
-            {/* We will render the list of medications here in a later step */}
-          </View>
-        )}
-      </ScrollView>
-
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={medications}
+          renderItem={renderMedicationItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+        />
+      )}
       <View style={[styles.footer, { borderTopColor: colors.outline }]}>
         <GradientButton
-          title="Add Medication"
-          onPress={() => {
-            // This now navigates to the modal screen we just created
-            router.push("/add-medication");
-          }}
-          icon="add-circle-outline"
+          title="Add New Medication"
+          onPress={() => router.push("/add-medication")}
         />
       </View>
     </View>
@@ -76,50 +187,48 @@ export default function MedPlannerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 60,
-    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
+    paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
+    alignItems: "center",
   },
-  backButton: {
-    padding: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginLeft: 16,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
-  },
+  title: { fontSize: 28, fontWeight: "bold" },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  listContent: { padding: 24 },
   emptyStateContainer: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingBottom: 80, // Offset for the footer button
+    padding: 20,
   },
   emptyStateTitle: {
     fontSize: 22,
     fontWeight: "bold",
     marginTop: 24,
+    textAlign: "center",
   },
   emptyStateSubtitle: {
     fontSize: 16,
     textAlign: "center",
     marginTop: 8,
-    maxWidth: "80%",
+    maxWidth: "90%",
     lineHeight: 24,
   },
-  footer: {
-    padding: 24,
-    paddingBottom: 40, // Add extra padding for home bar
-    borderTopWidth: 1,
+  footer: { padding: 24, paddingBottom: 40, borderTopWidth: 1 },
+  medicationItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
   },
+  medIcon: { marginRight: 16 },
+  medicationInfo: { flex: 1 },
+  medicationName: { fontSize: 18, fontWeight: "bold" },
+  medicationDosage: { fontSize: 14, marginTop: 4 },
+  medicationSchedule: { alignItems: "flex-end" },
+  scheduleText: { fontSize: 12 },
 });

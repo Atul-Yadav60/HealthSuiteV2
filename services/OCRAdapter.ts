@@ -1,5 +1,6 @@
 import TextRecognition from "@react-native-ml-kit/text-recognition";
 
+
 /**
  * Takes a local image path and uses ML Kit to recognize text in it.
  * @param imagePath The local file path to the image (e.g., 'file:///path/to/image.jpg').

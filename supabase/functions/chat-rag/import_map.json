@@ -1,0 +1,33 @@
+{
+  "imports": {
+    "std/": "https://deno.land/std@0.168.0/",
+
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+
+    "@langchain/community/embeddings/hf": "npm:@langchain/community/embeddings/hf",
+
+    "@langchain/community/vectorstores/supabase": "npm:@langchain/community/vectorstores/supabase",
+
+    "@langchain/community/tools/serpapi": "npm:@langchain/community/tools/serpapi",
+
+    "@langchain/core/tools": "npm:@langchain/core/tools",
+
+    "@langchain/core/prompts": "npm:@langchain/core/prompts",
+
+    "langchain/hub": "npm:langchain/hub",
+
+    "langchain/agents": "npm:langchain/agents",
+
+    "langchain/chains/retrieval": "npm:langchain/chains/retrieval",
+
+    "langchain/chains/combine_documents": "npm:langchain/chains/combine_documents",
+
+    "https://deno.land/std@0.168.0/http/server.ts": "https://deno.land/std@0.168.0/http/server.ts",
+
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2"
+
+    
+
+  }
+  
+}

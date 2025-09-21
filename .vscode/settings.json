@@ -1,0 +1,22 @@
+{
+  // --- Deno Configuration ---
+  // This enables the Deno extension for this entire project.
+  "deno.enable": true,
+
+  // This tells the Deno extension to use its own linter.
+  "deno.lint": true,
+
+  // --- Disable Conflicting Tools ---
+  // This is the most important part. We are turning off the default
+  // tools for TypeScript files to let Deno handle everything.
+
+  // Disable the built-in TypeScript validator
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.formatOnSave": true
+  },
+
+  // Disable the ESLint extension for TypeScript files
+  "eslint.validate": ["javascript", "javascriptreact"],
+  "java.configuration.updateBuildConfiguration": "interactive"
+}

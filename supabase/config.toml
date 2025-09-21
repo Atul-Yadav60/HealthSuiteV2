@@ -1,0 +1,8 @@
+[functions.chat-rag]
+import_map = "./functions/chat-rag/import_map.json"
+
+[functions.generate-pdf]
+import_map = "import_map.json"
+
+[functions.environmental-alerts]
+  schedule = "0 8 * * *"

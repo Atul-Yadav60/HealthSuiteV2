@@ -1,0 +1,9 @@
+{
+  "lint": {
+    "enabled": true
+  },
+  "fmt": {
+    "enabled": true
+  },
+  "importMap": "./import_map.json"
+}

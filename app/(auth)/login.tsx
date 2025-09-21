@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -14,22 +14,25 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { GlassCard } from '../../components/ui/GlassCard';
-import { GradientButton } from '../../components/ui/GradientButton';
-import { APP_CONFIG } from '../../constants/AppConfig';
-import Colors, { gradients } from '../../constants/Colors';
-import { useColorScheme } from '../../hooks/useColorScheme';
-import { supabase } from '@/utils/supabase';
+  ActivityIndicator,
+} from "react-native";
 
-const { height } = Dimensions.get('window');
+// Corrected import paths based on project structure
+import { GlassCard } from "../../components/ui/GlassCard";
+import { GradientButton } from "../../components/ui/GradientButton";
+import { MOCK_DATA } from "../../constants/AppConfig"; // Using MOCK_DATA for app name for now
+import Colors, { gradients } from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
+import { supabase } from "../../lib/supabase";
+
+const { height } = Dimensions.get("window");
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const colors = Colors[colorScheme ?? "dark"];
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -54,30 +57,30 @@ export default function LoginScreen() {
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  //  LoginScreen
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    setLoading(false);
 
-const handleLogin = async () => {
-  if (!email || !password) {
-    Alert.alert('Error', 'Please fill in all fields');
-    return;
-  }
-  setLoading(true);
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) {
-    Alert.alert('Error', error.message);
-  }
-  // The onAuthStateChange listener in useAuth will handle navigation
-  setLoading(false);
-};
+    if (error) {
+      Alert.alert("Login Failed", error.message);
+    } else {
+      // On successful login, our root layout will automatically handle the redirect.
+      router.replace("/(tabs)/home");
+    }
+  };
 
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* HEADER */}
       <LinearGradient
@@ -90,8 +93,12 @@ const handleLogin = async () => {
           <View style={styles.logo}>
             <Ionicons name="medical" size={48} color={colors.text} />
           </View>
-          <Text style={[styles.appName, { color: colors.text }]}>{APP_CONFIG.name}</Text>
-          <Text style={[styles.welcomeText, { color: colors.onSurfaceVariant }]}>
+          <Text style={[styles.appName, { color: colors.text }]}>
+            HealthSuite
+          </Text>
+          <Text
+            style={[styles.welcomeText, { color: colors.onSurfaceVariant }]}
+          >
             Welcome back to your health journey
           </Text>
         </View>
@@ -115,8 +122,18 @@ const handleLogin = async () => {
 
           {/* Email */}
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>Email Address</Text>
-            <View style={[styles.inputWrapper, { borderColor: colors.outline }]}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Email Address
+            </Text>
+            <View
+              style={[
+                styles.inputWrapper,
+                {
+                  borderColor: colors.outline,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
               <Ionicons name="mail" size={20} color={colors.onSurfaceVariant} />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
@@ -133,8 +150,20 @@ const handleLogin = async () => {
           {/* Password */}
           <View style={styles.inputContainer}>
             <Text style={[styles.label, { color: colors.text }]}>Password</Text>
-            <View style={[styles.inputWrapper, { borderColor: colors.outline }]}>
-              <Ionicons name="lock-closed" size={20} color={colors.onSurfaceVariant} />
+            <View
+              style={[
+                styles.inputWrapper,
+                {
+                  borderColor: colors.outline,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              <Ionicons
+                name="lock-closed"
+                size={20}
+                color={colors.onSurfaceVariant}
+              />
               <TextInput
                 style={[styles.input, { color: colors.text }]}
                 placeholder="Enter your password"
@@ -144,9 +173,12 @@ const handleLogin = async () => {
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeButton}
+              >
                 <Ionicons
-                  name={showPassword ? 'eye-off' : 'eye'}
+                  name={showPassword ? "eye-off" : "eye"}
                   size={20}
                   color={colors.onSurfaceVariant}
                 />
@@ -156,32 +188,58 @@ const handleLogin = async () => {
 
           {/* Forgot Password */}
           <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot password?</Text>
+            <Text style={[styles.forgotText, { color: colors.primary }]}>
+              Forgot password?
+            </Text>
           </TouchableOpacity>
 
           {/* Login button */}
-          <GradientButton title="Sign In" onPress={handleLogin} loading={loading} style={styles.loginButton} />
+          <GradientButton
+            title="Sign In"
+            onPress={handleLogin}
+            loading={loading}
+            style={styles.loginButton}
+          />
 
           {/* Divider */}
           <View style={styles.divider}>
-            <View style={[styles.dividerLine, { backgroundColor: colors.outline }]} />
-            <Text style={[styles.dividerText, { color: colors.onSurfaceVariant }]}>or</Text>
-            <View style={[styles.dividerLine, { backgroundColor: colors.outline }]} />
+            <View
+              style={[styles.dividerLine, { backgroundColor: colors.outline }]}
+            />
+            <Text
+              style={[styles.dividerText, { color: colors.onSurfaceVariant }]}
+            >
+              or
+            </Text>
+            <View
+              style={[styles.dividerLine, { backgroundColor: colors.outline }]}
+            />
           </View>
 
           {/* Google */}
-          <TouchableOpacity style={[styles.googleButton, { borderColor: colors.outline }]}>
+          <TouchableOpacity
+            style={[
+              styles.googleButton,
+              { borderColor: colors.outline, backgroundColor: colors.surface },
+            ]}
+          >
             <Ionicons name="logo-google" size={20} color={colors.text} />
-            <Text style={[styles.googleButtonText, { color: colors.text }]}>Continue with Google</Text>
+            <Text style={[styles.googleButtonText, { color: colors.text }]}>
+              Continue with Google
+            </Text>
           </TouchableOpacity>
 
           {/* Sign up link */}
           <View style={styles.signUpContainer}>
-            <Text style={[styles.signUpText, { color: colors.onSurfaceVariant }]}>
-              Don&apos;t have an account?{' '}
+            <Text
+              style={[styles.signUpText, { color: colors.onSurfaceVariant }]}
+            >
+              Don&apos;t have an account?{" "}
             </Text>
-            <TouchableOpacity onPress={() => router.push('/(auth)/signup')}>
-              <Text style={[styles.signUpLink, { color: colors.primary }]}>Sign Up</Text>
+            <TouchableOpacity onPress={() => router.push("/(auth)/signup")}>
+              <Text style={[styles.signUpLink, { color: colors.primary }]}>
+                Sign Up
+              </Text>
             </TouchableOpacity>
           </View>
         </GlassCard>
@@ -194,68 +252,73 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     height: height * 0.35,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 24,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
   },
-  logoContainer: { alignItems: 'center' },
+  logoContainer: { alignItems: "center" },
   logo: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
   },
-  appName: { fontSize: 32, fontWeight: 'bold', marginBottom: 6 },
-  welcomeText: { fontSize: 14, textAlign: 'center', opacity: 0.8 },
+  appName: { fontSize: 32, fontWeight: "bold", marginBottom: 6 },
+  welcomeText: { fontSize: 14, textAlign: "center", opacity: 0.8 },
   formWrapper: {
-    marginTop: -40,
+    marginTop: -60, // Adjusted for better overlap
     paddingHorizontal: 20,
+    flex: 1, // Allow form to take remaining space
   },
   formCard: {
     padding: 24,
     borderRadius: 24,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
   },
-  title: { fontSize: 28, fontWeight: 'bold', textAlign: 'center', marginBottom: 6 },
-  subtitle: { fontSize: 15, textAlign: 'center', marginBottom: 20 },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 6,
+  },
+  subtitle: { fontSize: 15, textAlign: "center", marginBottom: 20 },
   inputContainer: { marginBottom: 14 },
-  label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: "600", marginBottom: 6 },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    height: 50,
   },
   input: { flex: 1, marginLeft: 10, fontSize: 15 },
   eyeButton: { padding: 4 },
-  forgotPassword: { alignSelf: 'flex-end', marginBottom: 14 },
-  forgotText: { fontSize: 13, fontWeight: '600' },
+  forgotPassword: { alignSelf: "flex-end", marginBottom: 14 },
+  forgotText: { fontSize: 13, fontWeight: "600" },
   loginButton: { marginBottom: 16 },
-  divider: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  divider: { flexDirection: "row", alignItems: "center", marginBottom: 16 },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { marginHorizontal: 12, fontSize: 13 },
   googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 12,
     marginBottom: 16,
   },
-  googleButtonText: { marginLeft: 8, fontSize: 15, fontWeight: '600' },
-  signUpContainer: { flexDirection: 'row', justifyContent: 'center' },
+  googleButtonText: { marginLeft: 8, fontSize: 15, fontWeight: "600" },
+  signUpContainer: { flexDirection: "row", justifyContent: "center" },
   signUpText: { fontSize: 13 },
-  signUpLink: { fontSize: 13, fontWeight: '600' },
+  signUpLink: { fontSize: 13, fontWeight: "600" },
 });

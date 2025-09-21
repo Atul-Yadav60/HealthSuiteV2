@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Dimensions,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -26,6 +28,7 @@ export default function SignUpScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "dark"];
 
+  // Form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +37,27 @@ export default function SignUpScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
 
   const validateFields = () => {
     if (!name || name.trim().length < 2) {
@@ -105,6 +129,7 @@ export default function SignUpScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {/* HEADER */}
       <LinearGradient
         colors={gradients.secondary as [string, string]}
         style={styles.header}
@@ -116,196 +141,215 @@ export default function SignUpScreen() {
             <Ionicons name="medical" size={48} color="white" />
           </View>
           <Text style={styles.appName}>Aarogya AI</Text>
-          <Text style={styles.welcomeText}>Create your health account</Text>
+          <Text style={styles.welcomeText}>
+            Start your personalized health journey today
+          </Text>
         </View>
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.formContainer}>
-        <GlassCard style={styles.formCard}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Create Account
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-            Start your health journey today
-          </Text>
-
-          {/* Full Name */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>
-              Full Name
+      {/* FORM */}
+      <Animated.View
+        style={[
+          styles.formWrapper,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <GlassCard style={styles.formCard}>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Create Account
             </Text>
-            <View
-              style={[styles.inputWrapper, { borderColor: colors.outline }]}
-            >
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={colors.onSurfaceVariant}
-              />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder="Enter your full name"
-                placeholderTextColor={colors.onSurfaceVariant}
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                autoCorrect={false}
-              />
-            </View>
-          </View>
-
-          {/* Email */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>
-              Email Address
+            <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
+              Join the future of healthcare
             </Text>
-            <View
-              style={[styles.inputWrapper, { borderColor: colors.outline }]}
-            >
-              <Ionicons
-                name="mail-outline"
-                size={20}
-                color={colors.onSurfaceVariant}
-              />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder="Enter your email"
-                placeholderTextColor={colors.onSurfaceVariant}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
 
-          {/* Password */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>Password</Text>
-            <View
-              style={[styles.inputWrapper, { borderColor: colors.outline }]}
-            >
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color={colors.onSurfaceVariant}
-              />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder="Create a password"
-                placeholderTextColor={colors.onSurfaceVariant}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color={colors.onSurfaceVariant}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Confirm Password */}
-          <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>
-              Confirm Password
-            </Text>
-            <View
-              style={[styles.inputWrapper, { borderColor: colors.outline }]}
-            >
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color={colors.onSurfaceVariant}
-              />
-              <TextInput
-                style={[styles.input, { color: colors.text }]}
-                placeholder="Confirm your password"
-                placeholderTextColor={colors.onSurfaceVariant}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.eyeButton}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color={colors.onSurfaceVariant}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Terms and Conditions */}
-          <TouchableOpacity
-            style={styles.termsContainer}
-            onPress={() => setAcceptedTerms(!acceptedTerms)}
-          >
-            <View
-              style={[
-                styles.checkbox,
-                {
-                  borderColor: colors.outline,
-                  backgroundColor: acceptedTerms
-                    ? colors.primary
-                    : "transparent",
-                },
-              ]}
-            >
-              {acceptedTerms && (
-                <Ionicons
-                  name="checkmark"
-                  size={14}
-                  color={colors.background}
-                />
-              )}
-            </View>
-            <Text
-              style={[styles.termsText, { color: colors.onSurfaceVariant }]}
-            >
-              I agree to the{" "}
-              <Text style={[styles.termsLink, { color: colors.primary }]}>
-                Terms of Service
-              </Text>{" "}
-              and{" "}
-              <Text style={[styles.termsLink, { color: colors.primary }]}>
-                Privacy Policy
+            {/* Full Name */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Full Name
               </Text>
-            </Text>
-          </TouchableOpacity>
+              <View
+                style={[styles.inputWrapper, { borderColor: colors.outline }]}
+              >
+                <Ionicons
+                  name="person-outline"
+                  size={20}
+                  color={colors.onSurfaceVariant}
+                />
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="Enter your full name"
+                  placeholderTextColor={colors.onSurfaceVariant}
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
 
-          <GradientButton
-            title="Create Account"
-            onPress={handleSignUp}
-            loading={loading}
-            style={styles.nextButton}
-          />
+            {/* Email */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Email Address
+              </Text>
+              <View
+                style={[styles.inputWrapper, { borderColor: colors.outline }]}
+              >
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={colors.onSurfaceVariant}
+                />
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="Enter your email"
+                  placeholderTextColor={colors.onSurfaceVariant}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+            </View>
 
-          <View style={styles.signInContainer}>
-            <Text
-              style={[styles.signInText, { color: colors.onSurfaceVariant }]}
+            {/* Password */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Password
+              </Text>
+              <View
+                style={[styles.inputWrapper, { borderColor: colors.outline }]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={colors.onSurfaceVariant}
+                />
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="Create a password"
+                  placeholderTextColor={colors.onSurfaceVariant}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Confirm Password */}
+            <View style={styles.inputContainer}>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Confirm Password
+              </Text>
+              <View
+                style={[styles.inputWrapper, { borderColor: colors.outline }]}
+              >
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={colors.onSurfaceVariant}
+                />
+                <TextInput
+                  style={[styles.input, { color: colors.text }]}
+                  placeholder="Confirm your password"
+                  placeholderTextColor={colors.onSurfaceVariant}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={
+                      showConfirmPassword ? "eye-off-outline" : "eye-outline"
+                    }
+                    size={20}
+                    color={colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Terms and Conditions */}
+            <TouchableOpacity
+              style={styles.termsContainer}
+              onPress={() => setAcceptedTerms(!acceptedTerms)}
             >
-              Already have an account?{" "}
-            </Text>
-            <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
-              <Text style={[styles.signInLink, { color: colors.primary }]}>
-                Sign In
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    borderColor: colors.outline,
+                    backgroundColor: acceptedTerms
+                      ? colors.primary
+                      : "transparent",
+                  },
+                ]}
+              >
+                {acceptedTerms && (
+                  <Ionicons
+                    name="checkmark"
+                    size={14}
+                    color={colors.background}
+                  />
+                )}
+              </View>
+              <Text
+                style={[styles.termsText, { color: colors.onSurfaceVariant }]}
+              >
+                I agree to the{" "}
+                <Text style={[styles.termsLink, { color: colors.primary }]}>
+                  Terms of Service
+                </Text>{" "}
+                and{" "}
+                <Text style={[styles.termsLink, { color: colors.primary }]}>
+                  Privacy Policy
+                </Text>
               </Text>
             </TouchableOpacity>
-          </View>
-        </GlassCard>
-      </ScrollView>
+
+            {/* Sign Up Button */}
+            <GradientButton
+              title="Create Account"
+              onPress={handleSignUp}
+              loading={loading}
+              style={styles.button}
+            />
+
+            {/* Sign In Link */}
+            <View style={styles.signInContainer}>
+              <Text
+                style={[styles.signInText, { color: colors.onSurfaceVariant }]}
+              >
+                Already have an account?{" "}
+              </Text>
+              <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
+                <Text style={[styles.signInLink, { color: colors.primary }]}>
+                  Sign In
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </GlassCard>
+        </ScrollView>
+      </Animated.View>
     </KeyboardAvoidingView>
   );
 }
@@ -320,6 +364,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 40,
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
   },
   logoContainer: {
     alignItems: "center",
@@ -344,19 +390,25 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.8)",
     textAlign: "center",
   },
-  formContainer: {
+  formWrapper: {
+    marginTop: -60,
+    paddingHorizontal: 20,
+    flex: 1,
+  },
+  scrollContainer: {
     flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 24,
     paddingBottom: 20,
   },
   formCard: {
     padding: 24,
     borderRadius: 24,
-    marginTop: -60,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 8,
@@ -381,7 +433,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: Platform.OS === "ios" ? 14 : 10,
+    height: 52,
     backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   input: {
@@ -417,8 +469,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textDecorationLine: "underline",
   },
-  nextButton: {
-    marginBottom: 24,
+  button: {
+    marginTop: 10,
+    marginBottom: 20,
   },
   signInContainer: {
     flexDirection: "row",

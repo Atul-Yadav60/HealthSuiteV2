@@ -1,6 +1,6 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
-import { supabase } from "../utils/supabase";
+import { supabase } from "../lib/supabase";
 import { Session } from "@supabase/supabase-js";
+import React, { useState, useEffect, useContext, createContext } from "react";
 
 type AuthContextType = {
   session: Session | null;
@@ -9,40 +9,42 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType>({
   session: null,
-  loading: true,
+  loading: true, // Start in a loading state
 });
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    // Fetch the initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setLoading(false);
-    };
+      setLoading(false); // Mark loading as false after the first check
+    });
 
-    getSession();
-
+    // Listen for auth state changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      // Also set loading to false on changes, in case the first check was null
+      if (_event !== "INITIAL_SESSION") {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ session, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  const value = {
+    session,
+    loading,
+  };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

@@ -421,11 +421,24 @@
     
 
 
-import { Redirect } from "expo-router";
-import React from "react";
+// import { Redirect } from "expo-router";
+// import React from "react";
 
-export default function Index() {
-  // This component will automatically redirect to the home screen.
-  // This is the most reliable way to bypass authentication for development.
+// export default function Index() {
+//   // This component will automatically redirect to the home screen.
+//   // This is the most reliable way to bypass authentication for development.
+//   return <Redirect href="/(tabs)/home" />;
+// }
+
+import { Redirect } from "expo-router";
+
+/**
+ * This is now the initial file that loads for the app.
+ * We are redirecting directly to the main tab-based navigation.
+ * This effectively bypasses the entire authentication flow for development.
+ */
+const StartPage = () => {
   return <Redirect href="/(tabs)/home" />;
-}
+};
+
+export default StartPage;

@@ -1,42 +1,31 @@
-// File: lib/supabase.ts
-
-import 'react-native-url-polyfill/auto';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import * as SecureStore from 'expo-secure-store';
 
-// Adapter for using Expo's SecureStore with Supabase
-const ExpoSecureStoreAdapter = {
-  getItem: (key: string) => {
-    return SecureStore.getItemAsync(key);
-  },
-  setItem: (key: string, value: string) => {
-    SecureStore.setItemAsync(key, value);
-  },
-  removeItem: (key: string) => {
-    SecureStore.removeItemAsync(key);
-  },
-};
+// Production keys
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-// --- START: KEY CHANGES ---
+// Local development keys
+const localSupabaseUrl = 'http://127.0.0.1:54321';
+const localSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 
-// 1. Retrieve the Supabase URL and Anon Key from environment variables.
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// Choose URLs based on environment
+const finalSupabaseUrl = __DEV__ ? localSupabaseUrl : supabaseUrl;
+const finalSupabaseAnonKey = __DEV__ ? localSupabaseAnonKey : supabaseAnonKey;
 
-// 2. Add a check to ensure the variables are actually loaded.
-//    This provides a clear error message if your .env file is missing or incorrect.
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Supabase URL and Anon Key are not set. Please check your .env file.");
-}
-
-// 3. Create and export the Supabase client.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(finalSupabaseUrl, finalSupabaseAnonKey, {
   auth: {
-    storage: ExpoSecureStoreAdapter,
+    storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
 });
 
-// --- END: KEY CHANGES ---
+// Add this for local function calls
+export const getLocalFunctionUrl = (functionName: string) => {
+  if (__DEV__) {
+    return `http://127.0.0.1:54321/functions/v1/${functionName}`;
+  }
+  return `${finalSupabaseUrl}/functions/v1/${functionName}`;
+};

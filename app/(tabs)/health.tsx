@@ -1,22 +1,22 @@
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import React, { useState } from "react";
 import {
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { GlassCard } from '../../components/ui/GlassCard';
-import { MOCK_DATA } from '../../constants/AppConfig';
-import Colors from '../../constants/Colors';
-import { useColorScheme } from '../../hooks/useColorScheme';
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { GlassCard } from "../../components/ui/GlassCard";
+import { MOCK_DATA } from "../../constants/AppConfig";
+import Colors from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 export default function HealthScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const colors = Colors[colorScheme ?? "dark"];
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = React.useCallback(() => {
@@ -28,11 +28,11 @@ export default function HealthScreen() {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'mild':
+      case "mild":
         return colors.success;
-      case 'moderate':
+      case "moderate":
         return colors.warning;
-      case 'severe':
+      case "severe":
         return colors.error;
       default:
         return colors.info;
@@ -42,17 +42,17 @@ export default function HealthScreen() {
   const getMoodEmoji = (mood: number) => {
     switch (mood) {
       case 1:
-        return '😢';
+        return "😢";
       case 2:
-        return '😕';
+        return "😕";
       case 3:
-        return '😐';
+        return "😐";
       case 4:
-        return '🙂';
+        return "🙂";
       case 5:
-        return '😊';
+        return "😊";
       default:
-        return '😐';
+        return "😐";
     }
   };
 
@@ -66,9 +66,7 @@ export default function HealthScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          My Health
-        </Text>
+        <Text style={[styles.title, { color: colors.text }]}>My Health</Text>
         <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
           Your health journey in one place
         </Text>
@@ -81,52 +79,100 @@ export default function HealthScreen() {
         </Text>
         <View style={styles.summaryGrid}>
           <GlassCard style={styles.summaryCard}>
-            <View style={[styles.summaryIcon, { backgroundColor: colors.primary + '20' }]}>
+            <View
+              style={[
+                styles.summaryIcon,
+                { backgroundColor: colors.primary + "20" },
+              ]}
+            >
               <Ionicons name="camera" size={24} color={colors.primary} />
             </View>
             <Text style={[styles.summaryNumber, { color: colors.text }]}>
               {MOCK_DATA.recentScans.length}
             </Text>
-            <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant }]}>
+            <Text
+              style={[styles.summaryLabel, { color: colors.onSurfaceVariant }]}
+            >
               Skin Scans
             </Text>
           </GlassCard>
 
           <GlassCard style={styles.summaryCard}>
-            <View style={[styles.summaryIcon, { backgroundColor: colors.secondary + '20' }]}>
+            <View
+              style={[
+                styles.summaryIcon,
+                { backgroundColor: colors.secondary + "20" },
+              ]}
+            >
               <Ionicons name="heart" size={24} color={colors.secondary} />
             </View>
             <Text style={[styles.summaryNumber, { color: colors.text }]}>
               {MOCK_DATA.moodData.length}
             </Text>
-            <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant }]}>
+            <Text
+              style={[styles.summaryLabel, { color: colors.onSurfaceVariant }]}
+            >
               Mood Checks
             </Text>
           </GlassCard>
 
           <GlassCard style={styles.summaryCard}>
-            <View style={[styles.summaryIcon, { backgroundColor: colors.accent + '20' }]}>
+            <View
+              style={[
+                styles.summaryIcon,
+                { backgroundColor: colors.accent + "20" },
+              ]}
+            >
               <Ionicons name="calendar" size={24} color={colors.accent} />
             </View>
             <Text style={[styles.summaryNumber, { color: colors.text }]}>
               {MOCK_DATA.medications.length}
             </Text>
-            <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant }]}>
+            <Text
+              style={[styles.summaryLabel, { color: colors.onSurfaceVariant }]}
+            >
               Medications
             </Text>
           </GlassCard>
 
-          <GlassCard style={styles.summaryCard}>
-            <View style={[styles.summaryIcon, { backgroundColor: colors.info + '20' }]}>
-              <Ionicons name="shield-checkmark" size={24} color={colors.info} />
-            </View>
-            <Text style={[styles.summaryNumber, { color: colors.text }]}>
-              3
-            </Text>
-            <Text style={[styles.summaryLabel, { color: colors.onSurfaceVariant }]}>
-              Verifications
-            </Text>
-          </GlassCard>
+          {/* --- THIS IS THE UPDATED SECTION --- */}
+          {/* We wrap the GlassCard in a TouchableOpacity and give it a route */}
+          <TouchableOpacity
+            onPress={() => router.push("/trustMed")}
+            style={styles.summaryCardTouchable}
+          >
+            <GlassCard style={styles.summaryCardFullWidth}>
+              <View
+                style={[
+                  styles.summaryIcon,
+                  { backgroundColor: colors.info + "20" },
+                ]}
+              >
+                <Ionicons
+                  name="shield-checkmark"
+                  size={24}
+                  color={colors.info}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.summaryNumber,
+                  { color: colors.text, fontSize: 20 },
+                ]}
+              >
+                TrustMed AI
+              </Text>
+              <Text
+                style={[
+                  styles.summaryLabel,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                Verifications
+              </Text>
+            </GlassCard>
+          </TouchableOpacity>
+          {/* --- END OF UPDATED SECTION --- */}
         </View>
       </View>
 
@@ -136,7 +182,7 @@ export default function HealthScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Recent Scans
           </Text>
-          <TouchableOpacity onPress={() => router.push('/modules/skinAI')}>
+          <TouchableOpacity onPress={() => router.push("/modules/skinAI")}>
             <Text style={[styles.seeAllText, { color: colors.primary }]}>
               New Scan
             </Text>
@@ -154,12 +200,28 @@ export default function HealthScreen() {
                   <Text style={[styles.listItemTitle, { color: colors.text }]}>
                     {scan.condition}
                   </Text>
-                  <Text style={[styles.listItemSubtitle, { color: colors.onSurfaceVariant }]}>
-                    {scan.date} • {Math.round(scan.confidence * 100)}% confidence
+                  <Text
+                    style={[
+                      styles.listItemSubtitle,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {scan.date} • {Math.round(scan.confidence * 100)}%
+                    confidence
                   </Text>
                 </View>
-                <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(scan.severity) + '20' }]}>
-                  <Text style={[styles.severityText, { color: getSeverityColor(scan.severity) }]}>
+                <View
+                  style={[
+                    styles.severityBadge,
+                    { backgroundColor: getSeverityColor(scan.severity) + "20" },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.severityText,
+                      { color: getSeverityColor(scan.severity) },
+                    ]}
+                  >
                     {scan.severity}
                   </Text>
                 </View>
@@ -175,32 +237,45 @@ export default function HealthScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Mood & Wellness
           </Text>
-          <TouchableOpacity onPress={() => router.push('/modules/healMind')}>
+          <TouchableOpacity onPress={() => router.push("/modules/healMind")}>
             <Text style={[styles.seeAllText, { color: colors.primary }]}>
               Check In
             </Text>
           </TouchableOpacity>
         </View>
         <GlassCard style={styles.listCard}>
-          {MOCK_DATA.moodData.slice(-3).reverse().map((entry, index) => (
-            <View key={index} style={styles.listItem}>
-              <View style={styles.listItemContent}>
-                <View style={styles.listItemInfo}>
-                  <Text style={[styles.listItemTitle, { color: colors.text }]}>
-                    {getMoodEmoji(entry.mood)} {entry.date}
-                  </Text>
-                  <Text style={[styles.listItemSubtitle, { color: colors.onSurfaceVariant }]}>
-                    Sleep: {entry.sleep}h • Steps: {entry.steps.toLocaleString()}
-                  </Text>
-                </View>
-                <View style={styles.moodScore}>
-                  <Text style={[styles.moodScoreText, { color: colors.text }]}>
-                    {entry.mood}/5
-                  </Text>
+          {MOCK_DATA.moodData
+            .slice(-3)
+            .reverse()
+            .map((entry, index) => (
+              <View key={index} style={styles.listItem}>
+                <View style={styles.listItemContent}>
+                  <View style={styles.listItemInfo}>
+                    <Text
+                      style={[styles.listItemTitle, { color: colors.text }]}
+                    >
+                      {getMoodEmoji(entry.mood)} {entry.date}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.listItemSubtitle,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      Sleep: {entry.sleep}h • Steps:{" "}
+                      {entry.steps.toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.moodScore}>
+                    <Text
+                      style={[styles.moodScoreText, { color: colors.text }]}
+                    >
+                      {entry.mood}/5
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            ))}
         </GlassCard>
       </View>
 
@@ -210,7 +285,7 @@ export default function HealthScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Medications
           </Text>
-          <TouchableOpacity onPress={() => router.push('/modules/medPlanner')}>
+          <TouchableOpacity onPress={() => router.push("/modules/medPlanner")}>
             <Text style={[styles.seeAllText, { color: colors.primary }]}>
               Manage
             </Text>
@@ -224,18 +299,37 @@ export default function HealthScreen() {
                   <Text style={[styles.listItemTitle, { color: colors.text }]}>
                     {med.name}
                   </Text>
-                  <Text style={[styles.listItemSubtitle, { color: colors.onSurfaceVariant }]}>
+                  <Text
+                    style={[
+                      styles.listItemSubtitle,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
                     {med.dosage} • {med.time}
                   </Text>
                 </View>
-                <View style={[
-                  styles.statusBadge,
-                  { backgroundColor: med.status === 'taken' ? colors.success + '20' : colors.warning + '20' }
-                ]}>
-                  <Text style={[
-                    styles.statusText,
-                    { color: med.status === 'taken' ? colors.success : colors.warning }
-                  ]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor:
+                        med.status === "taken"
+                          ? colors.success + "20"
+                          : colors.warning + "20",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {
+                        color:
+                          med.status === "taken"
+                            ? colors.success
+                            : colors.warning,
+                      },
+                    ]}
+                  >
                     {med.status}
                   </Text>
                 </View>
@@ -262,7 +356,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
   },
   subtitle: {
@@ -274,45 +368,53 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   seeAllText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   summaryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   summaryCard: {
-    width: '48%',
+    width: "48%",
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
+  },
+  summaryCardTouchable: {
+    width: "48%",
+  },
+  summaryCardFullWidth: {
+    width: "100%",
+    padding: 16,
+    alignItems: "center",
   },
   summaryIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
   },
   summaryNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
   },
   summaryLabel: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   listCard: {
     padding: 16,
@@ -321,16 +423,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   listItemContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   listItemInfo: {
     flex: 1,
   },
   listItemTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 4,
   },
   listItemSubtitle: {
@@ -343,18 +445,18 @@ const styles = StyleSheet.create({
   },
   severityText: {
     fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
+    fontWeight: "600",
+    textTransform: "capitalize",
   },
   moodScore: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
   },
   moodScoreText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -363,7 +465,14 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
+    fontWeight: "600",
+    textTransform: "capitalize",
   },
 });
+
+
+
+
+
+
+

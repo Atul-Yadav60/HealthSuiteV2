@@ -11,14 +11,16 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  RefreshControl,
 } from "react-native";
 
 import { GradientButton } from "@/components/ui/GradientButton";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { supabase } from "@/lib/supabase";
-import { scheduleMedicationReminder } from "@/services/NotificationService";
-import * as Notifications from "expo-notifications";
+import {
+  fetchAndScheduleMedications,
+  cleanupExpiredMedications,
+} from "@/services/NotificationService";
 
 interface Medication {
   id: string;
@@ -28,6 +30,7 @@ interface Medication {
     type: string;
     times: string[];
   };
+  created_at?: string;
 }
 
 export default function MedPlannerScreen() {
@@ -35,17 +38,15 @@ export default function MedPlannerScreen() {
   const colors = Colors[colorScheme ?? "dark"];
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAndScheduleMedications = useCallback(async () => {
-    // --- DEVELOPMENT ONLY ---
-    // PASTE YOUR TEST USER ID FROM THE SUPABASE DASHBOARD HERE
+  const loadMedications = useCallback(async () => {
     const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
-    // --- END DEVELOPMENT ONLY ---
 
-    if (!testUserID) {
+    if (!testUserID || testUserID === "YOUR_TEST_USER_ID_HERE") {
       Alert.alert(
         "Configuration Error",
-        "Please set your Test User ID in app/(tabs)/medPlanner.tsx"
+        "Please set your Test User ID in the medication planner"
       );
       setLoading(false);
       return;
@@ -53,102 +54,279 @@ export default function MedPlannerScreen() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("medications")
-        .select("*")
-        .eq("user_id", testUserID) // Use the Test User ID
-        .order("created_at", { ascending: false });
+      console.log("Loading medications for user:", testUserID);
 
-      if (error) throw error;
-
-      const upcomingMedications = (data || []).filter((med) =>
-        med.schedule.times.some((time: string) => new Date(time) > new Date())
-      );
+      // Use the enhanced fetch function that includes cleanup
+      const upcomingMedications = await fetchAndScheduleMedications(testUserID);
       setMedications(upcomingMedications);
-
-      await Notifications.cancelAllScheduledNotificationsAsync();
-      console.log(
-        "Cleared old notifications. Rescheduling upcoming reminders..."
-      );
-
-      for (const med of upcomingMedications) {
-        for (const time of med.schedule.times) {
-          if (new Date(time) > new Date()) {
-            await scheduleMedicationReminder(
-              { name: med.name, dosage: med.dosage },
-              new Date(time)
-            );
-          }
-        }
-      }
     } catch (error: any) {
+      console.error("Error loading medications:", error);
       Alert.alert("Error", "Failed to fetch medications: " + error.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadMedications();
+    setRefreshing(false);
+  }, [loadMedications]);
+
   useFocusEffect(
     useCallback(() => {
-      fetchAndScheduleMedications();
-    }, [fetchAndScheduleMedications])
+      loadMedications();
+    }, [loadMedications])
   );
 
-  const renderMedicationItem = ({ item }: { item: Medication }) => (
-    <View
-      style={[
-        styles.medicationItem,
-        { backgroundColor: colors.surface, borderColor: colors.outline },
-      ]}
-    >
-      <Ionicons
-        name="medkit-outline"
-        size={32}
-        color={colors.primary}
-        style={styles.medIcon}
-      />
-      <View style={styles.medicationInfo}>
-        <Text style={[styles.medicationName, { color: colors.text }]}>
-          {item.name}
-        </Text>
-        <Text
-          style={[styles.medicationDosage, { color: colors.onSurfaceVariant }]}
-        >
-          {item.dosage || "No dosage"}
-        </Text>
-      </View>
-      <View style={styles.medicationSchedule}>
-        {item.schedule.times
-          .filter((t) => new Date(t) > new Date())
-          .map((time, index) => (
+  const deleteMedication = async (
+    medicationId: string,
+    medicationName: string
+  ) => {
+    Alert.alert(
+      "Delete Medication",
+      `Are you sure you want to delete "${medicationName}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const { supabase } = require("@/lib/supabase");
+              const { error } = await supabase
+                .from("medications")
+                .delete()
+                .eq("id", medicationId);
+
+              if (error) throw error;
+
+              // Refresh the list
+              await loadMedications();
+
+              Alert.alert("Success", "Medication deleted successfully");
+            } catch (error: any) {
+              Alert.alert(
+                "Error",
+                `Failed to delete medication: ${error.message}`
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const manualCleanup = async () => {
+    const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
+
+    try {
+      const cleanedCount = await cleanupExpiredMedications(testUserID);
+      if (cleanedCount > 0) {
+        Alert.alert(
+          "Cleanup Complete",
+          `Removed ${cleanedCount} expired medication(s)`
+        );
+        await loadMedications(); // Refresh the list
+      } else {
+        Alert.alert("No Cleanup Needed", "No expired medications found");
+      }
+    } catch (error: any) {
+      Alert.alert("Error", `Cleanup failed: ${error.message}`);
+    }
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMins = Math.floor(diffMs / (60 * 1000));
+    const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+
+    let timeLabel = "";
+
+    if (diffMins < 0) {
+      timeLabel = `${Math.abs(diffMins)} min ago`;
+    } else if (diffMins < 60) {
+      timeLabel = `in ${diffMins} min`;
+    } else if (diffHours < 24) {
+      timeLabel = `in ${diffHours}h ${diffMins % 60}m`;
+    } else {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      if (date.toDateString() === today.toDateString()) {
+        timeLabel = "Today";
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        timeLabel = "Tomorrow";
+      } else {
+        timeLabel = date.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        });
+      }
+    }
+
+    const timeString = date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    return `${timeString} (${timeLabel})`;
+  };
+
+  const getStatusColor = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffMins = Math.floor(diffMs / (60 * 1000));
+
+    if (diffMins < 0) return colors.error; // Past due
+    if (diffMins <= 10) return colors.warning || "#FFA500"; // Due soon
+    return colors.success || "#10B981"; // Future
+  };
+
+  const renderMedicationItem = ({ item }: { item: Medication }) => {
+    const now = new Date();
+    const futureTimes =
+      item.schedule?.times?.filter((t) => {
+        const medicationTime = new Date(t);
+        return medicationTime.getTime() > now.getTime() - 60 * 60 * 1000; // Include past hour
+      }) || [];
+
+    const nextTime = futureTimes
+      .map((t) => new Date(t))
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+
+    return (
+      <View
+        style={[
+          styles.medicationItem,
+          { backgroundColor: colors.surface, borderColor: colors.outline },
+        ]}
+      >
+        <View style={styles.medicationHeader}>
+          <View style={styles.medicationMainInfo}>
+            <Ionicons
+              name="medkit-outline"
+              size={32}
+              color={colors.primary}
+              style={styles.medIcon}
+            />
+            <View style={styles.medicationInfo}>
+              <Text style={[styles.medicationName, { color: colors.text }]}>
+                {item.name}
+              </Text>
+              <Text
+                style={[
+                  styles.medicationDosage,
+                  { color: colors.onSurfaceVariant },
+                ]}
+              >
+                {item.dosage || "No dosage specified"}
+              </Text>
+              {nextTime && (
+                <Text
+                  style={[
+                    styles.nextTimeText,
+                    { color: getStatusColor(nextTime.toISOString()) },
+                  ]}
+                >
+                  Next: {formatDateTime(nextTime.toISOString())}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => deleteMedication(item.id, item.name)}
+            style={styles.deleteButton}
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.error} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.medicationSchedule}>
+          <Text style={[styles.scheduleTitle, { color: colors.text }]}>
+            All Scheduled Times:
+          </Text>
+          {futureTimes.length > 0 ? (
+            futureTimes.map((time, index) => {
+              const timeDate = new Date(time);
+              const statusColor = getStatusColor(time);
+              const isPastDue = timeDate.getTime() < now.getTime();
+
+              return (
+                <View key={index} style={styles.scheduleItem}>
+                  <View
+                    style={[styles.statusDot, { backgroundColor: statusColor }]}
+                  />
+                  <Text style={[styles.scheduleText, { color: statusColor }]}>
+                    {formatDateTime(time)}
+                    {isPastDue && " (Missed)"}
+                  </Text>
+                </View>
+              );
+            })
+          ) : (
             <Text
-              key={index}
-              style={[styles.scheduleText, { color: colors.onSurfaceVariant }]}
+              style={[
+                styles.noRemindersText,
+                { color: colors.onSurfaceVariant },
+              ]}
             >
-              {new Date(time).toLocaleDateString()} at{" "}
-              {new Date(time).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              All reminders have expired
             </Text>
-          ))}
+          )}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { borderBottomColor: colors.outline }]}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Medication Planner
-        </Text>
+        <View style={styles.headerContent}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Medication Planner
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
+            {medications.length} active medication
+            {medications.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={manualCleanup}
+          style={[styles.cleanupButton, { backgroundColor: colors.surface }]}
+        >
+          <Ionicons name="refresh-outline" size={20} color={colors.primary} />
+        </TouchableOpacity>
       </View>
+
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
+          <Text
+            style={[styles.loadingText, { color: colors.onSurfaceVariant }]}
+          >
+            Loading medications...
+          </Text>
         </View>
       ) : medications.length === 0 ? (
-        <ScrollView contentContainerStyle={styles.centered}>
+        <ScrollView
+          contentContainerStyle={styles.centered}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+        >
           <View style={styles.emptyStateContainer}>
             <Ionicons
               name="medkit-outline"
@@ -156,7 +334,7 @@ export default function MedPlannerScreen() {
               color={colors.onSurfaceVariant}
             />
             <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-              No Upcoming Medications
+              No Active Medications
             </Text>
             <Text
               style={[
@@ -164,7 +342,8 @@ export default function MedPlannerScreen() {
                 { color: colors.onSurfaceVariant },
               ]}
             >
-              Tap 'Add Medication' to get started.
+              Add your first medication to get started with smart reminders and
+              automatic cleanup.
             </Text>
           </View>
         </ScrollView>
@@ -174,8 +353,18 @@ export default function MedPlannerScreen() {
           renderItem={renderMedicationItem}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         />
       )}
+
       <View style={[styles.footer, { borderTopColor: colors.outline }]}>
         <GradientButton
           title="Add New Medication"
@@ -193,10 +382,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerContent: {
+    flex: 1,
   },
   title: { fontSize: 28, fontWeight: "bold" },
-  centered: { flex: 1, justifyContent: "center", alignItems: "center" },
+  subtitle: {
+    fontSize: 14,
+    marginTop: 4,
+    opacity: 0.7,
+  },
+  cleanupButton: {
+    padding: 12,
+    borderRadius: 8,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+  },
   listContent: { padding: 24 },
   emptyStateContainer: {
     justifyContent: "center",
@@ -216,19 +428,68 @@ const styles = StyleSheet.create({
     maxWidth: "90%",
     lineHeight: 24,
   },
-  footer: { padding: 24, paddingBottom: 40, borderTopWidth: 1 },
+  footer: {
+    padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    borderTopWidth: 1,
+  },
   medicationItem: {
-    flexDirection: "row",
-    alignItems: "center",
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
   },
-  medIcon: { marginRight: 16 },
+  medicationHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  medicationMainInfo: {
+    flexDirection: "row",
+    flex: 1,
+  },
+  medIcon: { marginRight: 16, marginTop: 4 },
   medicationInfo: { flex: 1 },
   medicationName: { fontSize: 18, fontWeight: "bold" },
   medicationDosage: { fontSize: 14, marginTop: 4 },
-  medicationSchedule: { alignItems: "flex-end" },
-  scheduleText: { fontSize: 12 },
+  nextTimeText: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 4,
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  medicationSchedule: {
+    paddingLeft: 48,
+  },
+  scheduleTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  scheduleItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  scheduleText: {
+    fontSize: 13,
+    lineHeight: 18,
+    flex: 1,
+  },
+  noRemindersText: {
+    fontSize: 13,
+    fontStyle: "italic",
+    marginLeft: 16,
+  },
 });

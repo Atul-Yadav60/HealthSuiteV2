@@ -1,70 +1,64 @@
+import { LocationObject } from 'expo-location';
+import { supabase } from '@/lib/supabase'; // Using the intelligent client
 
-// import { supabase } from '@/lib/supabase'; // Using your existing supabase client
-// import { Coordinates } from '@/hooks/useLocation';
+export interface EnvironmentalData {
+  aqi: number;
+  temp: number;
+  uv: number;
+  weather: string;
+  rain: boolean;
+}
 
-// // A type definition for the data we expect from the API
-// export interface EnvironmentalData {
-//   temp: number;
-//   aqi: number;
-//   uv: number;
-//   weather: string;
-//   rain:boolean
-// }
-
-// export interface HealthData {
-//   heartRate: number;
-//   steps: number;
-// }
-
-// // Function to call the Supabase Edge Function
-// export const fetchEnvironmentalData = async (): Promise<EnvironmentalData> => {
-//   const { data, error } = await supabase.functions.invoke('environmental-alerts', {
-//      body: { lat: location.latitude, lon: location.longitude },
-//   });
-
-//   if (error) {
-//     console.error('Error fetching environmental data:', error);
-//     throw new Error('Failed to fetch environmental data.');
-//   }
-
-//   // Assuming the function returns data in the correct shape
-//   return data;
-// };
-
-// // Mock function for heart rate and steps for now
-// // In the future, this would fetch data from HealthKit, Google Fit, or your device
-// export const fetchHealthData = async (): Promise<HealthData> => {
-//   // Simulating an API call
-//   return new Promise((resolve) =>
-//     setTimeout(() => {
-//       resolve({
-//         heartRate: 78,
-//         steps: 4521,
-//       });
-//     }, 500)
-//   );
-// };
+// This function can remain as is.
+export const fetchEnvironmentalData = async (location: LocationObject): Promise<EnvironmentalData> => {
+  console.log("Fetching environmental data...");
+  // In a real app, this would also call a Supabase function
+  // For now, we return mock data.
+  return new Promise(resolve => setTimeout(() => resolve({
+    aqi: 151,
+    temp: 25,
+    uv: 8,
+    weather: "hazy",
+    rain: false,
+  }), 1000));
+};
 
 
-import { supabase } from '../lib/supabase'; // Ensure this path is correct
+// --- THIS IS THE CORRECTED FUNCTION ---
+// This is where your logic belongs. It's clean and simple.
+// It relies on `lib/supabase.ts` to correctly point to either the local or live server.
+export const checkDrugInteraction = async (query: string) => {
+  console.log(`Checking drug interaction for: "${query}"`);
+  
+  if (!query || query.trim().length < 5) {
+    throw new Error("Please enter a valid question about drug interactions.");
+  }
 
-export const fetchEnvironmentalData = async () => {
   try {
-    console.log("Attempting to invoke get-environmental-data function...");
-
-    // supabase.functions.invoke() automatically handles the Authorization header.
-    const { data, error } = await supabase.functions.invoke('get-environmental-data');
+    // `invoke` will automatically use the correct URL (local or live)
+    // because of our setup in `lib/supabase.ts`.
+    const { data, error } = await supabase.functions.invoke('drug-interaction', {
+      body: { query },
+    });
 
     if (error) {
-      // This will now give a more detailed error in your app's console
-      console.error("Error invoking function:", error);
-      throw error;
+      console.error("Supabase function invocation error:", error);
+      throw error; // Forward the error to be caught by the UI
     }
 
-    console.log("Successfully received data from function:", data);
+    console.log("Received interaction data:", data);
     return data;
   } catch (error) {
-    console.error('Failed to fetch environmental data:', error);
-    throw new Error('Failed to fetch environmental data.');
+    console.error('Drug interaction error:', error);
+    // Re-throw the error to be handled by the component
+    throw error;
   }
 };
+
+
+
+
+
+
+    
+

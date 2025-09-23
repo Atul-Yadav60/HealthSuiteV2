@@ -99,6 +99,7 @@ export default function TabLayout() {
       <Tabs.Screen name="medPlanner" options={{ href: null }} />
       <Tabs.Screen name="skinScanResult" options={{ href: null }} />
       <Tabs.Screen name="prescriptionResult" options={{ href: null }} />
+      <Tabs.Screen name="drugInteraction" options={{ href: null }} />
 
       {/* --- MODAL SCREEN REGISTRATION --- */}
       {/* This single line registers your modal screen with the tabs navigator */}

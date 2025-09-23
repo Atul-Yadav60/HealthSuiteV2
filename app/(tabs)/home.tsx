@@ -425,7 +425,7 @@ export default function HomeScreen() {
         </View>
       </Animated.View>
 
-      <Animated.View
+      {/* <Animated.View
         style={[
           styles.section,
           { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
@@ -482,7 +482,7 @@ export default function HomeScreen() {
             </View>
           </View>
         </GlassCard>
-      </Animated.View>
+      </Animated.View> */}
     </ScrollView>
   );
 }

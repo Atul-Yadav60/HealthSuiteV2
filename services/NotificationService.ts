@@ -14,11 +14,12 @@ Notifications.setNotificationHandler({
 
 // Enhanced medication reminder with multiple notification strategy
 export async function scheduleMedicationReminder(
-  medication: { name: string; dosage: string },
+  medicine_schedule: { name: string; dosage: string },
   scheduledTime: Date
 ): Promise<string[] | null> {
   console.log('=== Scheduling Medication Reminder ===');
-  console.log('Medication:', medication);
+  console.log('medicine_schedule:', medicine_schedule);
+  console.log('scheduledTime', medication);
   console.log('Scheduled time:', scheduledTime.toString());
   console.log('Current time:', new Date().toString());
   

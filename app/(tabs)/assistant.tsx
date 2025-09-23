@@ -1,5 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
 import React, { useState, useRef, useEffect } from "react";
+import { getBotResponse } from "../../services/ChatService";
 import {
   View,
   Text,
@@ -10,7 +10,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  SafeAreaView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import Colors from "../../constants/Colors";
 import { GlassCard } from "../../components/ui/GlassCard";
@@ -20,10 +22,10 @@ interface Message {
   id: string;
   text: string;
   sender: "user" | "bot";
+  timestamp: Date;
 }
 
 // IMPORTANT: Replace this with your actual Supabase Function URL
-// You can get this after you deploy the function in the next step.
 const SUPABASE_FUNCTION_URL =
   "https://popkggkhybnfewugjuix.supabase.co/functions/v1/chat-rag";
 
@@ -39,8 +41,9 @@ export default function AssistantScreen() {
     setMessages([
       {
         id: "1",
-        text: "Hello! I can search your health reports or the internet for general medical questions. How can I help?",
+        text: "Hi! I'm your Health Assistant. I can help you with:\n• Check your daily steps\n• Schedule medicines\n• Health tips\n• BMI calculations\n• Search your health reports\n• Answer medical questions\n\nHow can I help you today?",
         sender: "bot",
+        timestamp: new Date(),
       },
     ]);
   }, []);
@@ -52,61 +55,39 @@ export default function AssistantScreen() {
       id: Date.now().toString(),
       text: input,
       sender: "user",
+      timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
     const query = input;
     setInput("");
     setIsLoading(true);
 
-    const botMessageId = (Date.now() + 1).toString();
-    setMessages((prev) => [
-      ...prev,
-      { id: botMessageId, text: "", sender: "bot" },
-    ]);
-
+    // --- Enhanced Bot Response Logic ---
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("Authentication session not found.");
-      if (SUPABASE_FUNCTION_URL.includes("YOUR_SUPABASE_FUNCTION_URL")) {
-        throw new Error(
-          "Please replace the placeholder URL in the code before using the chatbot."
-        );
-      }
+      // Get intelligent response from our ChatService
+      const botResponseText = await getBotResponse(query);
 
-      const response = await fetch(SUPABASE_FUNCTION_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ query }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || "Failed to get a response from the assistant."
-        );
-      }
-
-      // Updated logic to handle a single JSON response
-      const data = await response.json();
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === botMessageId ? { ...msg, text: data.response } : msg
-        )
-      );
-    } catch (error: any) {
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === botMessageId
-            ? { ...msg, text: `Error: ${error.message}` }
-            : msg
-        )
-      );
-    } finally {
+      // Simulate a delay for a more natural feel
+      setTimeout(() => {
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: botResponseText,
+          sender: "bot",
+          timestamp: new Date(),
+          
+        };
+        setMessages((prev) => [...prev, botMessage]);
+        setIsLoading(false);
+      }, 1000);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Sorry, I'm having trouble right now. Please try again!",
+        sender: "bot",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
       setIsLoading(false);
     }
   };
@@ -117,96 +98,157 @@ export default function AssistantScreen() {
     }
   }, [messages]);
 
-  return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={100}
+  const renderMessage = ({ item }: { item: Message }) => (
+    <View
+      style={[
+        styles.messageContainer,
+        item.sender === "user"
+          ? styles.userMessageContainer
+          : styles.botMessageContainer,
+      ]}
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>AI Assistant</Text>
-      </View>
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.messageList}
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.messageContainer,
-              item.sender === "user"
-                ? styles.userMessageContainer
-                : styles.botMessageContainer,
-            ]}
-          >
-            <GlassCard
-              style={[
-                styles.messageBubble,
-                item.sender === "user"
-                  ? { backgroundColor: colors.primary + "30" }
-                  : { backgroundColor: colors.card },
-              ]}
-            >
-              <Text style={[styles.messageText, { color: colors.text }]}>
-                {item.text}
-              </Text>
-              {isLoading && item.sender === "bot" && !item.text && (
-                <ActivityIndicator color={colors.primary} />
-              )}
-            </GlassCard>
-          </View>
+      <GlassCard
+        style={[
+          styles.messageBubble,
+          item.sender === "user"
+            ? { backgroundColor: colors.primary + "30" }
+            : { backgroundColor: colors.card },
+        ]}
+      >
+        <Text style={[styles.messageText, { color: colors.text }]}>
+          {item.text}
+        </Text>
+        {isLoading && item.sender === "bot" && !item.text && (
+          <ActivityIndicator
+            color={colors.primary}
+            style={styles.loadingIndicator}
+          />
         )}
-      />
-      <View style={[styles.inputContainer, { borderTopColor: colors.outline }]}>
-        <TextInput
+        <Text
           style={[
-            styles.input,
+            styles.timestamp,
             {
-              color: colors.text,
-              backgroundColor: colors.surfaceVariant,
-              borderColor: colors.outline,
+              color:
+                item.sender === "user"
+                  ? colors.onPrimary
+                  : colors.onSurfaceVariant,
             },
           ]}
-          value={input}
-          onChangeText={setInput}
-          placeholder="Ask a question..."
-          placeholderTextColor={colors.onSurfaceVariant}
-          editable={!isLoading}
-        />
-        <TouchableOpacity
-          onPress={handleSend}
-          disabled={isLoading}
-          style={styles.sendButton}
         >
-          <Ionicons
-            name="send"
-            size={24}
-            color={isLoading ? colors.onSurfaceVariant : colors.primary}
+          {typeof item.timestamp === "string"
+            ? item.timestamp
+            : (item.timestamp || new Date()).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+        </Text>
+      </GlassCard>
+    </View>
+  );
+
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        {/* Enhanced Header */}
+        <View style={[styles.header, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.title, { color: colors.onPrimary }]}>
+            Health Assistant
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.onPrimary + "CC" }]}>
+            Your personal health companion
+          </Text>
+        </View>
+
+        {/* Messages List */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.messageList}
+          renderItem={renderMessage}
+          showsVerticalScrollIndicator={false}
+        />
+
+        {/* Input Container */}
+        <View
+          style={[styles.inputContainer, { borderTopColor: colors.outline }]}
+        >
+          <TextInput
+            style={[
+              styles.input,
+              {
+                color: colors.text,
+                backgroundColor: colors.surfaceVariant,
+                borderColor: colors.outline,
+              },
+            ]}
+            value={input}
+            onChangeText={setInput}
+            placeholder="Ask about your health..."
+            placeholderTextColor={colors.onSurfaceVariant}
+            editable={!isLoading}
+            multiline
+            maxLength={500}
           />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <TouchableOpacity
+            onPress={handleSend}
+            disabled={isLoading || !input.trim()}
+            style={[
+              styles.sendButton,
+              { backgroundColor: colors.primary },
+              (isLoading || !input.trim()) && { opacity: 0.6 },
+            ]}
+          >
+            <Ionicons name="send" size={20} color={colors.onPrimary} />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   header: {
-    paddingTop: Platform.OS === "android" ? 40 : 60,
+    paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingBottom: 20,
     paddingHorizontal: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   title: {
     fontSize: 28,
     fontWeight: "bold",
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 5,
+    fontWeight: "500",
   },
   messageList: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
   },
   messageContainer: {
-    marginVertical: 5,
+    marginVertical: 8,
     maxWidth: "80%",
   },
   userMessageContainer: {
@@ -218,26 +260,49 @@ const styles = StyleSheet.create({
   messageBubble: {
     padding: 15,
     borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   messageText: {
     fontSize: 16,
     lineHeight: 22,
   },
+  timestamp: {
+    fontSize: 11,
+    marginTop: 8,
+    textAlign: "right",
+  },
+  loadingIndicator: {
+    marginTop: 5,
+  },
   inputContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
+    alignItems: "flex-end",
+    padding: 15,
     borderTopWidth: 1,
   },
   input: {
     flex: 1,
-    borderRadius: 20,
+    borderRadius: 25,
     paddingHorizontal: 15,
-    paddingVertical: 10,
+    paddingVertical: 12,
     marginRight: 10,
     borderWidth: 1,
+    maxHeight: 100,
+    fontSize: 16,
   },
   sendButton: {
+    borderRadius: 25,
+    width: 50,
+    height: 50,
+    justifyContent: "center",
+    alignItems: "center",
     padding: 5,
   },
 });

@@ -24,9 +24,7 @@ export const fetchEnvironmentalData = async (location: LocationObject): Promise<
 };
 
 
-// --- THIS IS THE CORRECTED FUNCTION ---
-// This is where your logic belongs. It's clean and simple.
-// It relies on `lib/supabase.ts` to correctly point to either the local or live server.
+// It calls the cloud-based 'drug-interaction-v2' function
 export const checkDrugInteraction = async (query: string) => {
   console.log(`Checking drug interaction for: "${query}"`);
   
@@ -35,25 +33,24 @@ export const checkDrugInteraction = async (query: string) => {
   }
 
   try {
-    // `invoke` will automatically use the correct URL (local or live)
-    // because of our setup in `lib/supabase.ts`.
-    const { data, error } = await supabase.functions.invoke('drug-interaction', {
+    const { data, error } = await supabase.functions.invoke('drug-interaction-v2', {
       body: { query },
     });
 
     if (error) {
       console.error("Supabase function invocation error:", error);
-      throw error; // Forward the error to be caught by the UI
+      throw error; 
     }
 
     console.log("Received interaction data:", data);
     return data;
   } catch (error) {
     console.error('Drug interaction error:', error);
-    // Re-throw the error to be handled by the component
     throw error;
   }
 };
+
+
 
 
 

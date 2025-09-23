@@ -12,6 +12,8 @@ import {
   Alert,
 } from "react-native";
 
+import { GlassCard } from "@/components/ui/GlassCard";
+import { GradientButton } from "@/components/ui/GradientButton";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { checkDrugInteraction } from "@/services/api";
@@ -25,22 +27,13 @@ export default function DrugInteractionScreen() {
   const [results, setResults] = useState<any>(null);
 
   const handleCheckInteraction = async () => {
-    if (!query.trim()) {
-      Alert.alert("Error", "Please enter a question about drug interactions.");
-      return;
-    }
-
     setLoading(true);
     setResults(null);
     try {
       const data = await checkDrugInteraction(query);
       setResults(data);
     } catch (error: any) {
-      console.error("Drug interaction error:", error);
-      Alert.alert(
-        "Error",
-        error.message || "Could not check interaction. Please try again."
-      );
+      Alert.alert("Error", error.message || "Could not check interaction.");
     } finally {
       setLoading(false);
     }
@@ -82,46 +75,19 @@ export default function DrugInteractionScreen() {
           multiline
         />
 
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: colors.primary }]}
+        <GradientButton
+          title="Check Interaction"
           onPress={handleCheckInteraction}
-          disabled={loading}
-        >
-          <View style={styles.buttonContent}>
-            {loading && (
-              <ActivityIndicator
-                color="#FFFFFF"
-                size="small"
-                style={styles.buttonLoader}
-              />
-            )}
-            <Ionicons
-              name="search-outline"
-              size={20}
-              color="#FFFFFF"
-              style={styles.buttonIcon}
-            />
-            <Text style={styles.buttonText}>
-              {loading ? "Checking..." : "Check Interaction"}
-            </Text>
-          </View>
-        </TouchableOpacity>
+          loading={loading}
+          icon="search-outline"
+        />
 
         {results && (
-          <View
-            style={[
-              styles.resultsCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.outline,
-              },
-            ]}
-          >
+          <GlassCard style={styles.resultsCard}>
             <Text style={[styles.resultsTitle, { color: colors.text }]}>
               Results
             </Text>
-
-            {results.detected_drugs && results.detected_drugs.length > 0 && (
+            {results.detected_drugs && (
               <Text
                 style={[
                   styles.resultsSubtitle,
@@ -132,7 +98,7 @@ export default function DrugInteractionScreen() {
               </Text>
             )}
 
-            {results.interactions && results.interactions.length > 0 ? (
+            {results.interactions &&
               results.interactions.map((interaction: any, index: number) => (
                 <View
                   key={index}
@@ -157,45 +123,32 @@ export default function DrugInteractionScreen() {
                     </Text>
                   ) : (
                     <>
-                      {interaction.Interaction_Level && (
-                        <Text
-                          style={[
-                            styles.interactionLevel,
-                            {
-                              color:
-                                interaction.Interaction_Level.toLowerCase() ===
-                                "major"
-                                  ? colors.error
-                                  : colors.warning,
-                            },
-                          ]}
-                        >
-                          Level: {interaction.Interaction_Level}
-                        </Text>
-                      )}
-                      {interaction.Interaction_Details && (
-                        <Text
-                          style={[
-                            styles.interactionDetails,
-                            { color: colors.onSurfaceVariant },
-                          ]}
-                        >
-                          {interaction.Interaction_Details}
-                        </Text>
-                      )}
+                      <Text
+                        style={[
+                          styles.interactionLevel,
+                          {
+                            color:
+                              interaction.Interaction_Level === "Major"
+                                ? colors.error
+                                : colors.warning,
+                          },
+                        ]}
+                      >
+                        Level: {interaction.Interaction_Level}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.interactionDetails,
+                          { color: colors.onSurfaceVariant },
+                        ]}
+                      >
+                        {interaction.Interaction_Details}
+                      </Text>
                     </>
                   )}
                 </View>
-              ))
-            ) : (
-              <Text
-                style={[styles.noResults, { color: colors.onSurfaceVariant }]}
-              >
-                No interactions found. This could mean the drugs are safe to use
-                together, but always consult a healthcare professional.
-              </Text>
-            )}
-          </View>
+              ))}
+          </GlassCard>
         )}
       </ScrollView>
     </View>
@@ -203,9 +156,7 @@ export default function DrugInteractionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -214,23 +165,18 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
-  backButton: {
-    padding: 8,
-  },
+  backButton: { padding: 8 },
   title: {
     fontSize: 24,
     fontWeight: "bold",
     marginLeft: 16,
   },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 40,
-  },
+  scrollContent: { padding: 24, gap: 20 },
   description: {
     fontSize: 16,
     lineHeight: 24,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 10,
   },
   input: {
     minHeight: 100,
@@ -239,34 +185,10 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     textAlignVertical: "top",
-    marginBottom: 20,
-  },
-  button: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  buttonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  buttonLoader: {
-    marginRight: 8,
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "bold",
   },
   resultsCard: {
-    borderRadius: 12,
-    borderWidth: 1,
+    marginTop: 20,
     padding: 20,
-    marginTop: 10,
   },
   resultsTitle: {
     fontSize: 22,
@@ -287,23 +209,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     textTransform: "capitalize",
-    marginBottom: 8,
   },
   interactionLevel: {
     fontSize: 14,
     fontWeight: "bold",
-    marginBottom: 4,
-    textTransform: "uppercase",
+    marginTop: 4,
   },
   interactionDetails: {
     fontSize: 14,
     lineHeight: 20,
-  },
-  noResults: {
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
-    fontStyle: "italic",
-    marginTop: 10,
+    marginTop: 4,
   },
 });

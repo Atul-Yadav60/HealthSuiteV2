@@ -1,27 +1,42 @@
-import { ReactNode } from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import React from "react";
+import { StyleSheet, View, ViewStyle } from "react-native";
+import Colors from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 type Props = {
-	children: ReactNode;
-	style?: ViewStyle | ViewStyle[];
-	variant?: 'surface' | 'primary';
+  children: React.ReactNode;
+  style?: ViewStyle | ViewStyle[];
+  variant?: "surface" | "primary";
 };
 
-export default function Card({ children, style, variant = 'surface' }: Props) {
-	return <View style={[styles.base, variant === 'primary' ? styles.primary : styles.surface, style]}>{children}</View>;
+export default function Card({ children, style, variant = "surface" }: Props) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "dark"];
+  return (
+    <View
+      style={[
+        styles.base,
+        variant === "primary"
+          ? { backgroundColor: colors.primary }
+          : { backgroundColor: colors.surface },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-	base: {
-		borderRadius: 16,
-		padding: 16,
-	},
-	surface: {
-		backgroundColor: '#0B1725',
-		borderWidth: 1,
-		borderColor: '#1E2A44',
-	},
-	primary: {
-		backgroundColor: '#6AA6FF',
-	},
-}); 
+  base: {
+    borderRadius: 24,
+    overflow: "hidden", // Ensures nothing spills outside
+    padding: 16,
+    // Subtle shadow instead of big shadow
+    shadowColor: "#000",
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+});

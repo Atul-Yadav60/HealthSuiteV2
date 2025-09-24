@@ -1,82 +1,51 @@
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import React from "react";
 import {
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-    ViewStyle,
-    Platform,
-} from 'react-native';
-import { MODULES } from '../../constants/AppConfig';
-import Colors from '../../constants/Colors';
-import { useColorScheme } from '../../hooks/useColorScheme';
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ViewStyle,
+  Platform,
+} from "react-native";
+import { MODULES } from "../../constants/AppConfig";
+import Colors from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 interface ModuleCardProps {
   moduleId: string;
   onPress: () => void;
   style?: ViewStyle;
-  size?: 'small' | 'medium' | 'large';
+  size?: "small" | "medium" | "large";
 }
 
 export function ModuleCard({
   moduleId,
   onPress,
   style,
-  size = 'medium',
+  size = "medium",
 }: ModuleCardProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const colors = Colors[colorScheme ?? "dark"];
   const module = MODULES[moduleId as keyof typeof MODULES];
 
   const getSizeStyles = () => {
     switch (size) {
-      case 'small':
-        return {
-          width: 120,
-          height: 120,
-          padding: 12,
-          borderRadius: 16,
-        };
-      case 'large':
-        return {
-          width: 180,
-          height: 180,
-          padding: 20,
-          borderRadius: 24,
-        };
+      case "small":
+        return { width: 120, height: 120, padding: 12, borderRadius: 16 };
+      case "large":
+        return { width: 180, height: 180, padding: 20, borderRadius: 24 };
       default:
-        return {
-          width: 150,
-          height: 150,
-          padding: 16,
-          borderRadius: 20,
-        };
+        return { width: 150, height: 150, padding: 16, borderRadius: 20 };
     }
   };
 
-  const getIconSize = () => {
-    switch (size) {
-      case 'small':
-        return 24;
-      case 'large':
-        return 40;
-      default:
-        return 32;
-    }
-  };
+  const getIconSize = () =>
+    size === "small" ? 24 : size === "large" ? 40 : 32;
 
-  const getTextSize = () => {
-    switch (size) {
-      case 'small':
-        return 12;
-      case 'large':
-        return 18;
-      default:
-        return 14;
-    }
-  };
+  const getTextSize = () =>
+    size === "small" ? 12 : size === "large" ? 18 : 14;
 
   return (
     <TouchableOpacity
@@ -104,7 +73,7 @@ export function ModuleCard({
               {
                 fontSize: getTextSize(),
                 color: colors.text,
-                fontWeight: '600',
+                fontWeight: "600",
               },
             ]}
             numberOfLines={2}
@@ -114,10 +83,7 @@ export function ModuleCard({
           <Text
             style={[
               styles.subtitle,
-              {
-                fontSize: getTextSize() - 2,
-                color: colors.onSurfaceVariant,
-              },
+              { fontSize: getTextSize() - 2, color: colors.onSurfaceVariant },
             ]}
             numberOfLines={1}
           >
@@ -132,43 +98,38 @@ export function ModuleCard({
 const styles = StyleSheet.create({
   container: {
     ...Platform.select({
-      web: {
-        boxShadow: '0px 8px 16px rgba(0, 0, 0, 0.3)',
-      },
+      web: { boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.08)" },
       default: {
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 8,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        elevation: 3,
       },
     }),
   },
   gradient: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     flex: 1,
   },
   iconContainer: {
     marginBottom: 8,
     padding: 8,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
   title: {
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 4,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   subtitle: {
-    textAlign: 'center',
+    textAlign: "center",
     opacity: 0.8,
   },
 });

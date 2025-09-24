@@ -53,7 +53,7 @@ export default function PrescriptionResultScreen() {
 
     setIsSaving(true);
     try {
-      // 1. Upload the image to Supabase Storage
+      // Upload the image to Supabase Storage
       const fileExt = imageUri.split(".").pop();
       const fileName = `${
         session.user.id
@@ -69,7 +69,7 @@ export default function PrescriptionResultScreen() {
 
       if (uploadError) throw uploadError;
 
-      // 2. Create the JSON report data
+      // Create the JSON report data
       const reportJson = {
         analysisType: "prescription-ocr",
         recognizedText: parsedData.rawText,
@@ -77,7 +77,7 @@ export default function PrescriptionResultScreen() {
         extractedFrequencies: parsedData.frequencies,
       };
 
-      // 3. Insert the report into the database
+      // Insert the report into the database
       const { data: reportData, error: reportError } = await supabase
         .from("reports")
         .insert({
@@ -90,7 +90,7 @@ export default function PrescriptionResultScreen() {
 
       if (reportError) throw reportError;
 
-      // 4. Link the uploaded file to the report
+      // Link the uploaded file to the report
       const { error: fileError } = await supabase.from("report_files").insert({
         report_id: reportData.report_id,
         user_id: session.user.id,
@@ -107,7 +107,6 @@ export default function PrescriptionResultScreen() {
       });
       setModalVisible(true);
     } catch (error: any) {
-      console.error("Error saving prescription report:", error);
       setModalInfo({
         title: "Error",
         message: `Failed to save report: ${error.message}`,
@@ -121,8 +120,10 @@ export default function PrescriptionResultScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={{ flex: 1, backgroundColor: colors.background }}
+      contentContainerStyle={styles.content}
     >
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -131,97 +132,87 @@ export default function PrescriptionResultScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>
-          Prescription Details
+          Prescription Scan Result
         </Text>
       </View>
 
-      <View style={styles.content}>
-        <GlassCard style={styles.imageCard}>
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.image}
-            resizeMode="contain"
-          />
-        </GlassCard>
-
-        <GlassCard style={styles.resultsCard}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Recognized Medications
-          </Text>
-          {parsedData.medications.length > 0 ? (
-            parsedData.medications.map((med, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.resultItem,
-                  { borderBottomColor: colors.outline },
-                ]}
-              >
-                <Ionicons
-                  name="medical-outline"
-                  size={20}
-                  color={colors.primary}
-                />
-                <Text style={[styles.resultText, { color: colors.text }]}>
-                  {med}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text
-              style={[
-                styles.placeholderText,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              No medications identified.
-            </Text>
-          )}
-
-          <Text
-            style={[styles.sectionTitle, { color: colors.text, marginTop: 20 }]}
-          >
-            Recognized Frequencies
-          </Text>
-          {parsedData.frequencies.length > 0 ? (
-            parsedData.frequencies.map((freq, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.resultItem,
-                  { borderBottomColor: colors.outline },
-                ]}
-              >
-                <Ionicons
-                  name="time-outline"
-                  size={20}
-                  color={colors.secondary}
-                />
-                <Text style={[styles.resultText, { color: colors.text }]}>
-                  {freq}
-                </Text>
-              </View>
-            ))
-          ) : (
-            <Text
-              style={[
-                styles.placeholderText,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              No frequencies identified.
-            </Text>
-          )}
-        </GlassCard>
-
-        <GradientButton
-          title="Save Report"
-          onPress={handleSaveReport}
-          loading={isSaving}
-          style={styles.saveButton}
+      {/* Prescription Image */}
+      <GlassCard style={styles.imageCard}>
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.image}
+          resizeMode="contain"
         />
-      </View>
+      </GlassCard>
 
+      {/* Results */}
+      <GlassCard style={styles.resultsCard}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Recognized Medications
+        </Text>
+        {parsedData.medications.length > 0 ? (
+          parsedData.medications.map((med, index) => (
+            <View
+              key={index}
+              style={[styles.resultItem, { borderBottomColor: colors.outline }]}
+            >
+              <Ionicons
+                name="medical-outline"
+                size={20}
+                color={colors.primary}
+              />
+              <Text style={[styles.resultText, { color: colors.text }]}>
+                {med}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text
+            style={[styles.placeholderText, { color: colors.onSurfaceVariant }]}
+          >
+            No medications identified.
+          </Text>
+        )}
+
+        <Text
+          style={[styles.sectionTitle, { color: colors.text, marginTop: 20 }]}
+        >
+          Recognized Frequencies
+        </Text>
+        {parsedData.frequencies.length > 0 ? (
+          parsedData.frequencies.map((freq, index) => (
+            <View
+              key={index}
+              style={[styles.resultItem, { borderBottomColor: colors.outline }]}
+            >
+              <Ionicons
+                name="time-outline"
+                size={20}
+                color={colors.secondary}
+              />
+              <Text style={[styles.resultText, { color: colors.text }]}>
+                {freq}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <Text
+            style={[styles.placeholderText, { color: colors.onSurfaceVariant }]}
+          >
+            No frequencies identified.
+          </Text>
+        )}
+      </GlassCard>
+
+      {/* Save Button */}
+      <GradientButton
+        title="Save Report"
+        onPress={handleSaveReport}
+        loading={isSaving}
+        style={styles.saveButton}
+      />
+
+      {/* Modal */}
       <MessageModal
         visible={modalVisible}
         message={modalInfo.message}
@@ -239,8 +230,8 @@ export default function PrescriptionResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  content: {
+    paddingBottom: 40,
   },
   header: {
     flexDirection: "row",
@@ -257,22 +248,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
   },
-  content: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
   imageCard: {
     padding: 10,
     marginBottom: 20,
+    alignItems: "center",
   },
   image: {
     width: "100%",
-    height: 250,
+    height: 220,
     borderRadius: 16,
+    backgroundColor: "#222",
   },
   resultsCard: {
     padding: 20,
-    marginBottom: 30,
+    marginBottom: 10,
   },
   sectionTitle: {
     fontSize: 18,
@@ -293,8 +282,10 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16,
     fontStyle: "italic",
+    opacity: 0.8,
   },
   saveButton: {
     marginTop: 20,
+    marginHorizontal: 20,
   },
 });

@@ -1,10 +1,10 @@
-import { Stack } from 'expo-router';
-import Colors from '../../constants/Colors';
-import { useColorScheme } from '../../hooks/useColorScheme';
+import { Stack } from "expo-router";
+import Colors from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 export default function ModulesLayout() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const colors = Colors[colorScheme ?? "dark"];
 
   return (
     <Stack
@@ -14,25 +14,32 @@ export default function ModulesLayout() {
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
-          fontWeight: '600',
+          fontWeight: "700",
         },
         contentStyle: {
           backgroundColor: colors.background,
         },
-        animation: 'slide_from_right',
+        animation: "fade_from_bottom",
       }}
     >
       <Stack.Screen
         name="index"
         options={{
-          title: 'Modules',
+          title: "Modules",
           headerShown: false,
         }}
       />
       <Stack.Screen
         name="[moduleId]"
         options={{
-          title: 'Module',
+          title: "Module",
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="trustMed"
+        options={{
+          title: "TrustMed AI",
           headerShown: false,
         }}
       />

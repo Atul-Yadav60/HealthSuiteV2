@@ -1,26 +1,35 @@
-import { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { ReactNode } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import Colors from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
-export default function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
-	return (
-		<View style={styles.row}>
-			<Text style={styles.title}>{title}</Text>
-			{action}
-		</View>
-	);
+export default function SectionHeader({
+  title,
+  action,
+}: {
+  title: string;
+  action?: ReactNode;
+}) {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? "dark"];
+  return (
+    <View style={styles.row}>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      {action}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-	row: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'space-between',
-		marginTop: 16,
-		marginBottom: 8,
-	},
-	title: {
-		color: '#E6F1FF',
-		fontSize: 16,
-		fontWeight: '800',
-	},
-}); 
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
+});

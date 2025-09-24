@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   TouchableOpacity,
   Text,
@@ -7,21 +7,28 @@ import {
   TextStyle,
   ActivityIndicator,
   Platform,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Colors, { gradients } from '../../constants/Colors';
-import { useColorScheme } from '../../hooks/useColorScheme';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import Colors, { gradients } from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 interface GradientButtonProps {
   title: string;
   onPress: () => void;
   style?: ViewStyle;
   textStyle?: TextStyle;
-  gradient?: keyof typeof gradients;
+  gradient?: keyof typeof gradients | string[];
   disabled?: boolean;
   loading?: boolean;
-  size?: 'small' | 'medium' | 'large';
-  variant?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'error';
+  size?: "small" | "medium" | "large";
+  variant?:
+    | "primary"
+    | "secondary"
+    | "accent"
+    | "success"
+    | "warning"
+    | "error";
+  icon?: string;
 }
 
 export function GradientButton({
@@ -32,27 +39,28 @@ export function GradientButton({
   gradient,
   disabled = false,
   loading = false,
-  size = 'medium',
-  variant = 'primary',
+  size = "medium",
+  variant = "primary",
+  icon,
 }: GradientButtonProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
+  const colors = Colors[colorScheme ?? "dark"];
 
   const getGradientColors = () => {
-    if (gradient) return gradients[gradient];
-    
+    if (Array.isArray(gradient)) return gradient;
+    if (gradient) return gradients[gradient as keyof typeof gradients];
     switch (variant) {
-      case 'primary':
+      case "primary":
         return gradients.primary;
-      case 'secondary':
+      case "secondary":
         return gradients.secondary;
-      case 'accent':
+      case "accent":
         return gradients.accent;
-      case 'success':
+      case "success":
         return gradients.success;
-      case 'warning':
+      case "warning":
         return gradients.warning;
-      case 'error':
+      case "error":
         return gradients.error;
       default:
         return gradients.primary;
@@ -61,20 +69,20 @@ export function GradientButton({
 
   const getSizeStyles = () => {
     switch (size) {
-      case 'small':
+      case "small":
         return { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 12 };
-      case 'large':
-        return { paddingVertical: 16, paddingHorizontal: 32, borderRadius: 24 };
+      case "large":
+        return { paddingVertical: 18, paddingHorizontal: 36, borderRadius: 28 };
       default:
-        return { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 16 };
+        return { paddingVertical: 14, paddingHorizontal: 24, borderRadius: 18 };
     }
   };
 
   const getTextSize = () => {
     switch (size) {
-      case 'small':
+      case "small":
         return 14;
-      case 'large':
+      case "large":
         return 18;
       default:
         return 16;
@@ -85,8 +93,15 @@ export function GradientButton({
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      style={[styles.container, style]}
-      activeOpacity={0.8}
+      style={[
+        styles.container,
+        getSizeStyles(),
+        style,
+        disabled || loading ? styles.disabled : undefined,
+      ]}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading }}
     >
       <LinearGradient
         colors={getGradientColors()}
@@ -95,7 +110,7 @@ export function GradientButton({
         style={[
           styles.gradient,
           getSizeStyles(),
-          disabled && styles.disabled,
+          disabled || loading ? styles.disabled : undefined,
         ]}
       >
         {loading ? (
@@ -107,11 +122,13 @@ export function GradientButton({
               {
                 fontSize: getTextSize(),
                 color: colors.text,
-                fontWeight: '600',
+                fontWeight: "700",
               },
               textStyle,
             ]}
+            accessibilityLabel={title}
           >
+            {icon ? <Text style={{ marginRight: 6 }}>{icon}</Text> : null}
             {title}
           </Text>
         )}
@@ -124,26 +141,24 @@ const styles = StyleSheet.create({
   container: {
     ...Platform.select({
       web: {
-        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)',
+        boxShadow: "0px 2px 6px rgba(0,0,0,0.08)",
       },
       default: {
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 4,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        elevation: 3,
       },
     }),
   },
   gradient: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
   },
   text: {
-    textAlign: 'center',
+    textAlign: "center",
     letterSpacing: 0.5,
   },
   disabled: {

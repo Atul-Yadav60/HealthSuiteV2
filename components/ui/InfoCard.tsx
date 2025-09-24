@@ -1,5 +1,3 @@
-// File: components/ui/InfoCard.tsx
-
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { ThemedText } from "../ThemedText";
@@ -48,11 +46,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     margin: 6,
     overflow: "hidden",
+    // Much more subtle shadow
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
   gradient: {
     flex: 1,

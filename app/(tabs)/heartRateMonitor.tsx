@@ -16,7 +16,6 @@ import { GradientButton } from "../../components/ui/GradientButton";
 import MessageModal from "../../components/ui/MessageModal";
 import Colors from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
-// TODO: Ensure BLEService exists at the correct path. If it does not exist, create it as shown below or update the import path accordingly.
 import { bleService } from "../../services/BLEManager";
 
 export default function HeartRateMonitorScreen() {
@@ -47,7 +46,7 @@ export default function HeartRateMonitorScreen() {
         bleService.disconnectFromDevice();
       }
     };
-  }, [connectedDevice]); // Added connectedDevice to the dependency array
+  }, [connectedDevice]);
 
   const handleScan = () => {
     if (!hasPermission) {
@@ -71,7 +70,6 @@ export default function HeartRateMonitorScreen() {
           return prevDevices;
         });
       });
-      // Stop scanning after 10 seconds
       setTimeout(() => {
         if (isScanning) {
           bleService.stopScan();
@@ -106,20 +104,27 @@ export default function HeartRateMonitorScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Heart Rate Monitor
+      {/* Modern Glass Header */}
+      <GlassCard style={styles.headerCard}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <Ionicons name="heart" size={32} color={colors.error} />
+          <Text style={[styles.title, { color: colors.text }]}>
+            Heart Rate Monitor
+          </Text>
+        </View>
+        <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
+          Connect your wearable device and track your heart rate live
         </Text>
-      </View>
+      </GlassCard>
 
       {connectedDevice ? (
-        <View style={styles.connectedView}>
+        <GlassCard style={styles.connectedCard}>
           <Text
             style={[styles.connectedText, { color: colors.onSurfaceVariant }]}
           >
@@ -142,13 +147,14 @@ export default function HeartRateMonitorScreen() {
             onPress={handleDisconnect}
             variant="error"
           />
-        </View>
+        </GlassCard>
       ) : (
         <View style={styles.disconnectedView}>
           <GradientButton
             title={isScanning ? "Stop Scan" : "Scan for Devices"}
             onPress={handleScan}
             loading={isScanning}
+            style={styles.scanButton}
           />
           <FlatList
             data={devices}
@@ -179,6 +185,7 @@ export default function HeartRateMonitorScreen() {
           />
         </View>
       )}
+
       <MessageModal
         visible={modalVisible}
         message={modalMessage}
@@ -191,64 +198,51 @@ export default function HeartRateMonitorScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
+  headerCard: {
+    margin: 18,
+    padding: 18,
+  },
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === "android" ? 40 : 60,
-    paddingBottom: 20,
+    gap: 10,
+    marginBottom: 10,
   },
-  backButton: {
-    marginRight: 16,
-    padding: 8,
-  },
+  backButton: { padding: 8 },
   title: {
     fontSize: 24,
     fontWeight: "bold",
+    marginLeft: 8,
   },
-  connectedView: {
-    flex: 1,
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 5,
+    opacity: 0.8,
+  },
+  connectedCard: {
+    marginHorizontal: 20,
+    marginVertical: 16,
+    padding: 24,
     alignItems: "center",
-    padding: 20,
   },
-  connectedText: {
-    fontSize: 18,
-  },
-  deviceName: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginVertical: 10,
-  },
+  connectedText: { fontSize: 18 },
+  deviceName: { fontSize: 24, fontWeight: "bold", marginVertical: 8 },
   hrContainer: {
-    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    marginVertical: 24,
   },
-  hrText: {
-    fontSize: 100,
-    fontWeight: "bold",
-    marginTop: 20,
-  },
-  hrUnit: {
-    fontSize: 20,
-  },
-  disconnectedView: {
-    flex: 1,
-    padding: 20,
-  },
+  hrText: { fontSize: 72, fontWeight: "bold", marginTop: 8 },
+  hrUnit: { fontSize: 20 },
+  disconnectedView: { flex: 1, padding: 20 },
+  scanButton: { marginBottom: 10 },
   deviceCard: {
     padding: 20,
-    marginBottom: 10,
+    marginBottom: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  deviceText: {
-    fontSize: 18,
-    fontWeight: "500",
-  },
-  emptyContainer: {
-    marginTop: 50,
-    alignItems: "center",
-  },
+  deviceText: { fontSize: 18, fontWeight: "500" },
+  emptyContainer: { marginTop: 50, alignItems: "center" },
 });

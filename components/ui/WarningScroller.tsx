@@ -55,20 +55,23 @@ export function WarningScroller({ warnings }: WarningScrollerProps) {
   const colors = Colors[colorScheme ?? "dark"];
   const scrollX = useRef(new Animated.Value(0)).current;
 
-  // We duplicate the warnings to create a seamless loop effect
-  const extendedWarnings = [...warnings, ...warnings];
+  // Create multiple copies for truly infinite scroll
+  const infiniteWarnings = [...warnings, ...warnings, ...warnings, ...warnings];
 
   useEffect(() => {
-    // Calculate the total width of the content to be scrolled
-    const contentWidth = warnings.length * (width / 2); // Approximate width of each item
+    if (warnings.length === 0) return;
+
+    // Calculate the width needed for one complete cycle
+    const singleCycleWidth = warnings.length * (width * 0.8); // Increased width per item
 
     const scrollAnimation = Animated.loop(
       Animated.timing(scrollX, {
-        toValue: -contentWidth, // Scroll to the end of the original list
-        duration: warnings.length * 5000, // 5 seconds per warning
+        toValue: -singleCycleWidth, // Scroll exactly one cycle
+        duration: warnings.length * 2000, // Even faster: 2 seconds per warning
         easing: Easing.linear,
         useNativeDriver: true,
-      })
+      }),
+      { iterations: -1 } // Infinite iterations
     );
 
     scrollAnimation.start();
@@ -83,6 +86,7 @@ export function WarningScroller({ warnings }: WarningScrollerProps) {
   return (
     <ThemedView
       style={[styles.container, { backgroundColor: colors.warningBackground }]}
+      // accessibilityRole="marquee" // <-- REMOVE THIS LINE
     >
       <Animated.View
         style={[
@@ -92,7 +96,7 @@ export function WarningScroller({ warnings }: WarningScrollerProps) {
           },
         ]}
       >
-        {extendedWarnings.map((warning, index) => (
+        {infiniteWarnings.map((warning, index) => (
           <WarningItem
             key={`${warning.id}-${index}`}
             icon={warning.icon}
@@ -120,8 +124,9 @@ const styles = StyleSheet.create({
   warningItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    width: width / 2, // Each item takes up half the screen width
+    paddingHorizontal: 24, // Increased padding
+    width: width * 0.8, // Increased width: 80% of screen width (was 70%)
+    minWidth: 280, // Increased minimum width for better readability
   },
   icon: {
     marginRight: 8,
@@ -129,5 +134,6 @@ const styles = StyleSheet.create({
   warningText: {
     fontSize: 14,
     fontWeight: "600",
+    flexShrink: 1, // Allow text to shrink if needed
   },
 });

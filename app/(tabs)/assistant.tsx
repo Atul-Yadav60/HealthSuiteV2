@@ -11,12 +11,16 @@ import {
   Platform,
   ActivityIndicator,
   SafeAreaView,
+  Dimensions,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useColorScheme } from "../../hooks/useColorScheme";
-import Colors from "../../constants/Colors";
-import { GlassCard } from "../../components/ui/GlassCard";
-import { supabase } from "../../utils/supabase";
+import Colors, { gradients } from "../../constants/Colors";
+import { QuickActionButton } from "../../components/ui/QuickActionButton";
+
+const { width } = Dimensions.get("window");
 
 interface Message {
   id: string;
@@ -25,9 +29,30 @@ interface Message {
   timestamp: Date;
 }
 
-// IMPORTANT: Replace this with your actual Supabase Function URL
-const SUPABASE_FUNCTION_URL =
-  "https://popkggkhybnfewugjuix.supabase.co/functions/v1/chat-rag";
+// Quick health questions
+const QUICK_QUESTIONS = [
+  {
+    id: "steps",
+    title: "Daily Steps",
+    icon: "walk-outline",
+    color: "#10B981",
+    question: "How many steps have I taken today?",
+  },
+  {
+    id: "bmi",
+    title: "BMI Check",
+    icon: "calculator-outline",
+    color: "#6366F1",
+    question: "Calculate my BMI",
+  },
+  {
+    id: "tips",
+    title: "Health Tips",
+    icon: "bulb-outline",
+    color: "#F59E0B",
+    question: "Give me a health tip for today",
+  },
+];
 
 export default function AssistantScreen() {
   const colorScheme = useColorScheme();
@@ -35,52 +60,49 @@ export default function AssistantScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showQuickQuestions, setShowQuickQuestions] = useState(true);
   const flatListRef = useRef<FlatList>(null);
 
   useEffect(() => {
     setMessages([
       {
         id: "1",
-        text: "Hi! I'm your Health Assistant. I can help you with:\n• Check your daily steps\n• Schedule medicines\n• Health tips\n• BMI calculations\n• Search your health reports\n• Answer medical questions\n\nHow can I help you today?",
+        text: "Hi! I'm your Health Assistant 👋\n\nI can help you with health questions, track your wellness, and provide personalized advice.\n\nWhat would you like to know?",
         sender: "bot",
         timestamp: new Date(),
       },
     ]);
   }, []);
 
-  const handleSend = async () => {
-    if (input.trim() === "" || isLoading) return;
+  const handleSend = async (messageText?: string) => {
+    const textToSend = messageText || input.trim();
+    if (textToSend === "" || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: input,
+      text: textToSend,
       sender: "user",
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
-    const query = input;
     setInput("");
     setIsLoading(true);
+    setShowQuickQuestions(false);
 
-    // --- Enhanced Bot Response Logic ---
     try {
-      // Get intelligent response from our ChatService
-      const botResponseText = await getBotResponse(query);
+      const botResponseText = await getBotResponse(textToSend);
 
-      // Simulate a delay for a more natural feel
       setTimeout(() => {
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
           text: botResponseText,
           sender: "bot",
           timestamp: new Date(),
-          
         };
         setMessages((prev) => [...prev, botMessage]);
         setIsLoading(false);
       }, 1000);
     } catch (error) {
-      console.error("Chat error:", error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         text: "Sorry, I'm having trouble right now. Please try again!",
@@ -90,6 +112,10 @@ export default function AssistantScreen() {
       setMessages((prev) => [...prev, errorMessage]);
       setIsLoading(false);
     }
+  };
+
+  const handleQuickQuestion = (question: string) => {
+    handleSend(question);
   };
 
   useEffect(() => {
@@ -107,42 +133,41 @@ export default function AssistantScreen() {
           : styles.botMessageContainer,
       ]}
     >
-      <GlassCard
+      <View
         style={[
           styles.messageBubble,
           item.sender === "user"
-            ? { backgroundColor: colors.primary + "30" }
-            : { backgroundColor: colors.card },
+            ? [styles.userBubble, { backgroundColor: colors.primary }]
+            : [styles.botBubble, { backgroundColor: colors.card }],
         ]}
       >
-        <Text style={[styles.messageText, { color: colors.text }]}>
+        <Text
+          style={[
+            styles.messageText,
+            {
+              color: item.sender === "user" ? "#FFFFFF" : colors.text,
+            },
+          ]}
+        >
           {item.text}
         </Text>
-        {isLoading && item.sender === "bot" && !item.text && (
-          <ActivityIndicator
-            color={colors.primary}
-            style={styles.loadingIndicator}
-          />
-        )}
         <Text
           style={[
             styles.timestamp,
             {
               color:
                 item.sender === "user"
-                  ? colors.onPrimary
+                  ? "rgba(255, 255, 255, 0.8)"
                   : colors.onSurfaceVariant,
             },
           ]}
         >
-          {typeof item.timestamp === "string"
-            ? item.timestamp
-            : (item.timestamp || new Date()).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+          {item.timestamp.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
         </Text>
-      </GlassCard>
+      </View>
     </View>
   );
 
@@ -150,42 +175,73 @@ export default function AssistantScreen() {
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
-        {/* Enhanced Header */}
-        <View style={[styles.header, { backgroundColor: colors.primary }]}>
-          <Text style={[styles.title, { color: colors.onPrimary }]}>
-            Health Assistant
+      <StatusBar barStyle="light-content" />
+
+      {/* Header with Gradient */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={["#2066c1ff", "#1a5ba8"]}
+          style={styles.header}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Text style={styles.greeting}>Health Assistant</Text>
+          <Text style={styles.subtitle}>Your wellness companion</Text>
+        </LinearGradient>
+      </View>
+
+      {/* Messages List */}
+      <FlatList
+        ref={flatListRef}
+        data={messages}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.messageList}
+        renderItem={renderMessage}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
+      />
+
+      {/* Quick Questions */}
+      {showQuickQuestions && messages.length <= 1 && (
+        <View style={styles.quickQuestionsContainer}>
+          <Text style={[styles.quickQuestionsTitle, { color: colors.text }]}>
+            Quick Questions
           </Text>
-          <Text style={[styles.subtitle, { color: colors.onPrimary + "CC" }]}>
-            Your personal health companion
+          <View style={styles.quickActionsGrid}>
+            {QUICK_QUESTIONS.map((question) => (
+              <QuickActionButton
+                key={question.id}
+                action={question}
+                onPress={() => handleQuickQuestion(question.question)}
+                style={styles.quickQuestion}
+              />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Loading Indicator */}
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={colors.primary} />
+          <Text
+            style={[styles.loadingText, { color: colors.onSurfaceVariant }]}
+          >
+            Assistant is typing...
           </Text>
         </View>
+      )}
 
-        {/* Messages List */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.messageList}
-          renderItem={renderMessage}
-          showsVerticalScrollIndicator={false}
-        />
-
-        {/* Input Container */}
-        <View
-          style={[styles.inputContainer, { borderTopColor: colors.outline }]}
-        >
+      {/* Input Container - Fixed at bottom */}
+      <View style={styles.inputContainer}>
+        <View style={styles.inputWrapper}>
           <TextInput
             style={[
               styles.input,
               {
                 color: colors.text,
-                backgroundColor: colors.surfaceVariant,
-                borderColor: colors.outline,
+                backgroundColor: colors.card,
               },
             ]}
             value={input}
@@ -197,58 +253,59 @@ export default function AssistantScreen() {
             maxLength={500}
           />
           <TouchableOpacity
-            onPress={handleSend}
+            onPress={() => handleSend()}
             disabled={isLoading || !input.trim()}
             style={[
               styles.sendButton,
               { backgroundColor: colors.primary },
-              (isLoading || !input.trim()) && { opacity: 0.6 },
+              (isLoading || !input.trim()) && { opacity: 0.5 },
             ]}
           >
-            <Ionicons name="send" size={20} color={colors.onPrimary} />
+            <Ionicons name="send" size={20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  headerWrapper: {
+    paddingHorizontal: 0,
+    paddingTop: 30,
+    paddingBottom: 2,
   },
   header: {
-    paddingTop: Platform.OS === "ios" ? 60 : 40,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    shadowColor: "#2066c1ff",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  title: {
-    fontSize: 28,
+  greeting: {
+    fontSize: 20,
     fontWeight: "bold",
+    marginBottom: 4,
+    color: "white",
     textAlign: "center",
   },
   subtitle: {
     fontSize: 14,
+    color: "rgba(255,255,255,0.9)",
     textAlign: "center",
-    marginTop: 5,
-    fontWeight: "500",
   },
   messageList: {
-    paddingHorizontal: 15,
-    paddingVertical: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    flexGrow: 1,
   },
   messageContainer: {
-    marginVertical: 8,
+    marginVertical: 6,
     maxWidth: "80%",
   },
   userMessageContainer: {
@@ -258,51 +315,91 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   messageBubble: {
-    padding: 15,
+    padding: 16,
     borderRadius: 20,
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     elevation: 2,
+  },
+  userBubble: {
+    borderBottomRightRadius: 8,
+  },
+  botBubble: {
+    borderBottomLeftRadius: 8,
   },
   messageText: {
     fontSize: 16,
     lineHeight: 22,
+    marginBottom: 8,
   },
   timestamp: {
-    fontSize: 11,
-    marginTop: 8,
+    fontSize: 12,
+    opacity: 0.8,
     textAlign: "right",
   },
-  loadingIndicator: {
-    marginTop: 5,
+  quickQuestionsContainer: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+  },
+  quickQuestionsTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  quickActionsGrid: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    gap: 12,
+  },
+  quickQuestion: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    fontStyle: "italic",
   },
   inputContainer: {
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    paddingBottom: 50, // Padding to stay above tab bar when keyboard is not active
+  },
+  inputWrapper: {
     flexDirection: "row",
     alignItems: "flex-end",
-    padding: 15,
-    borderTopWidth: 1,
+    gap: 12,
   },
   input: {
     flex: 1,
-    borderRadius: 25,
-    paddingHorizontal: 15,
+    borderRadius: 24,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    marginRight: 10,
-    borderWidth: 1,
-    maxHeight: 100,
     fontSize: 16,
+    maxHeight: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sendButton: {
-    borderRadius: 25,
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
     alignItems: "center",
-    padding: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });

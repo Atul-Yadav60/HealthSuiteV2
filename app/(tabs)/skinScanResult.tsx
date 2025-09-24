@@ -73,7 +73,7 @@ export default function SkinScanResultScreen() {
 
       if (error) throw error;
 
-      setReportId(data); // Store the returned report_id
+      setReportId(data);
       setModalInfo({
         title: "Success",
         message: "Your skin scan report has been saved.",
@@ -81,7 +81,6 @@ export default function SkinScanResultScreen() {
       });
       setModalVisible(true);
     } catch (error: any) {
-      console.error("Error saving report:", error);
       setModalInfo({
         title: "Error",
         message: "Could not save the report. " + error.message,
@@ -111,10 +110,8 @@ export default function SkinScanResultScreen() {
 
       if (error) throw error;
 
-      // Open the PDF URL in the browser
       await Linking.openURL(data.pdfUrl);
     } catch (error: any) {
-      console.error("Error generating PDF:", error);
       setModalInfo({
         title: "Error",
         message: `Could not generate PDF: ${error.message}`,

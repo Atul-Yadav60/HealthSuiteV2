@@ -30,7 +30,6 @@ export default function TabLayout() {
         ),
       }}
     >
-      {/* --- VISIBLE TABS --- */}
       <Tabs.Screen
         name="home"
         options={{
@@ -65,15 +64,16 @@ export default function TabLayout() {
               color={color}
             />
           ),
+          tabBarHideOnKeyboard: true, // Hide tab bar when keyboard opens
         }}
       />
       <Tabs.Screen
-        name="alerts"
+        name="appointments"
         options={{
-          title: "Alerts",
+          title: "Appointments & Records",
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon
-              name={focused ? "notifications" : "notifications-outline"}
+              name={focused ? "calendar" : "calendar-outline"}
               color={color}
             />
           ),
@@ -102,14 +102,13 @@ export default function TabLayout() {
       <Tabs.Screen name="drugInteraction" options={{ href: null }} />
 
       {/* --- MODAL SCREEN REGISTRATION --- */}
-      {/* This single line registers your modal screen with the tabs navigator */}
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="../add-medication"
         options={{
           presentation: "modal",
           headerShown: false,
         }}
-      />
+      /> */}
     </Tabs>
   );
 }

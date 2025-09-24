@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, { useState, useCallback } from "react";
 import {
@@ -12,16 +13,18 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  StatusBar,
 } from "react-native";
-
-import { GradientButton } from "@/components/ui/GradientButton";
-import Colors from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { InfoCard } from "../../components/ui/InfoCard";
+import { GradientButton } from "../../components/ui/GradientButton";
+import Colors from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
 import {
   fetchAndScheduleMedications,
   cleanupExpiredMedications,
-} from "@/services/NotificationService";
+} from "../../services/NotificationService";
 
+// --- Medication Interface ---
 interface Medication {
   id: string;
   name: string;
@@ -40,9 +43,9 @@ export default function MedPlannerScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // --- Load Medications (with cleanup) ---
   const loadMedications = useCallback(async () => {
     const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
-
     if (!testUserID || testUserID === "YOUR_TEST_USER_ID_HERE") {
       Alert.alert(
         "Configuration Error",
@@ -54,14 +57,31 @@ export default function MedPlannerScreen() {
 
     try {
       setLoading(true);
-      console.log("Loading medications for user:", testUserID);
-
-      // Use the enhanced fetch function that includes cleanup
       const upcomingMedications = await fetchAndScheduleMedications(testUserID);
-      setMedications(upcomingMedications);
+      
+      // Debug logging to see what we actually get
+      console.log("Raw upcomingMedications:", upcomingMedications);
+      console.log("Type of upcomingMedications:", typeof upcomingMedications);
+      console.log("Is array:", Array.isArray(upcomingMedications));
+      
+      // Ensure we always have an array, even if the API returns null/undefined
+      const safeMedications = Array.isArray(upcomingMedications) ? upcomingMedications : [];
+      
+      // Validate each medication has the expected structure
+      const validatedMedications = safeMedications.filter((med) => {
+        return med && typeof med === 'object' && med.id && med.name;
+      }).map((med) => ({
+        ...med,
+        schedule: med.schedule || { type: "", times: [] }
+      }));
+      
+      console.log("Validated medications:", validatedMedications);
+      setMedications(validatedMedications);
     } catch (error: any) {
       console.error("Error loading medications:", error);
       Alert.alert("Error", "Failed to fetch medications: " + error.message);
+      // Set empty array on error to prevent map errors
+      setMedications([]);
     } finally {
       setLoading(false);
     }
@@ -79,6 +99,7 @@ export default function MedPlannerScreen() {
     }, [loadMedications])
   );
 
+  // --- Delete medication handler ---
   const deleteMedication = async (
     medicationId: string,
     medicationName: string
@@ -98,12 +119,8 @@ export default function MedPlannerScreen() {
                 .from("medications")
                 .delete()
                 .eq("id", medicationId);
-
               if (error) throw error;
-
-              // Refresh the list
               await loadMedications();
-
               Alert.alert("Success", "Medication deleted successfully");
             } catch (error: any) {
               Alert.alert(
@@ -117,9 +134,9 @@ export default function MedPlannerScreen() {
     );
   };
 
+  // --- Manual cleanup handler ---
   const manualCleanup = async () => {
     const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
-
     try {
       const cleanedCount = await cleanupExpiredMedications(testUserID);
       if (cleanedCount > 0) {
@@ -127,7 +144,7 @@ export default function MedPlannerScreen() {
           "Cleanup Complete",
           `Removed ${cleanedCount} expired medication(s)`
         );
-        await loadMedications(); // Refresh the list
+        await loadMedications();
       } else {
         Alert.alert("No Cleanup Needed", "No expired medications found");
       }
@@ -136,45 +153,36 @@ export default function MedPlannerScreen() {
     }
   };
 
+  // --- Schedule formatting ---
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffMins = Math.floor(diffMs / (60 * 1000));
     const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
-
     let timeLabel = "";
-
-    if (diffMins < 0) {
-      timeLabel = `${Math.abs(diffMins)} min ago`;
-    } else if (diffMins < 60) {
-      timeLabel = `in ${diffMins} min`;
-    } else if (diffHours < 24) {
-      timeLabel = `in ${diffHours}h ${diffMins % 60}m`;
-    } else {
+    if (diffMins < 0) timeLabel = `${Math.abs(diffMins)} min ago`;
+    else if (diffMins < 60) timeLabel = `in ${diffMins} min`;
+    else if (diffHours < 24) timeLabel = `in ${diffHours}h ${diffMins % 60}m`;
+    else {
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
-
-      if (date.toDateString() === today.toDateString()) {
-        timeLabel = "Today";
-      } else if (date.toDateString() === tomorrow.toDateString()) {
+      if (date.toDateString() === today.toDateString()) timeLabel = "Today";
+      else if (date.toDateString() === tomorrow.toDateString())
         timeLabel = "Tomorrow";
-      } else {
+      else
         timeLabel = date.toLocaleDateString("en-US", {
           weekday: "short",
           month: "short",
           day: "numeric",
         });
-      }
     }
-
     const timeString = date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     });
-
     return `${timeString} (${timeLabel})`;
   };
 
@@ -183,39 +191,66 @@ export default function MedPlannerScreen() {
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffMins = Math.floor(diffMs / (60 * 1000));
-
     if (diffMins < 0) return colors.error; // Past due
     if (diffMins <= 10) return colors.warning || "#FFA500"; // Due soon
     return colors.success || "#10B981"; // Future
   };
 
+  // --- Render for medication cards ---
   const renderMedicationItem = ({ item }: { item: Medication }) => {
-    const now = new Date();
-    const futureTimes =
-      item.schedule?.times?.filter((t) => {
-        const medicationTime = new Date(t);
-        return medicationTime.getTime() > now.getTime() - 60 * 60 * 1000; // Include past hour
-      }) || [];
+    console.log("Rendering medication item:", item);
+    
+    if (!item || typeof item !== 'object') {
+      console.error("Invalid medication item:", item);
+      return null;
+    }
 
-    const nextTime = futureTimes
-      .map((t) => new Date(t))
-      .sort((a, b) => a.getTime() - b.getTime())[0];
+    const now = new Date();
+    // Add extra safety checks for schedule and times
+    const scheduleTimes = item.schedule?.times;
+    console.log("Schedule times:", scheduleTimes, "Type:", typeof scheduleTimes, "IsArray:", Array.isArray(scheduleTimes));
+    
+    const futureTimes = Array.isArray(scheduleTimes)
+      ? scheduleTimes.filter((t) => {
+          try {
+            const medicationTime = new Date(t);
+            return medicationTime.getTime() > now.getTime() - 60 * 60 * 1000;
+          } catch (error) {
+            console.error("Invalid time format:", t);
+            return false;
+          }
+        })
+      : [];
+      
+    console.log("Future times:", futureTimes);
+    
+    const nextTime =
+      futureTimes.length > 0
+        ? futureTimes
+            .map((t) => {
+              try {
+                return new Date(t);
+              } catch (error) {
+                console.error("Error parsing time:", t);
+                return null;
+              }
+            })
+            .filter(Boolean)
+            .sort((a, b) => a!.getTime() - b!.getTime())[0]
+        : null;
 
     return (
-      <View
-        style={[
-          styles.medicationItem,
-          { backgroundColor: colors.surface, borderColor: colors.outline },
-        ]}
-      >
+      <InfoCard style={styles.medicationCard}>
         <View style={styles.medicationHeader}>
           <View style={styles.medicationMainInfo}>
-            <Ionicons
-              name="medkit-outline"
-              size={32}
-              color={colors.primary}
-              style={styles.medIcon}
-            />
+            <View
+              style={[
+                styles.medIconContainer,
+                { backgroundColor: colors.primary },
+              ]}
+            >
+              <Ionicons name="medkit" size={24} color="white" />
+            </View>
             <View style={styles.medicationInfo}>
               <Text style={[styles.medicationName, { color: colors.text }]}>
                 {item.name}
@@ -240,7 +275,6 @@ export default function MedPlannerScreen() {
               )}
             </View>
           </View>
-
           <TouchableOpacity
             onPress={() => deleteMedication(item.id, item.name)}
             style={styles.deleteButton}
@@ -249,214 +283,274 @@ export default function MedPlannerScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.medicationSchedule}>
-          <Text style={[styles.scheduleTitle, { color: colors.text }]}>
-            All Scheduled Times:
-          </Text>
-          {futureTimes.length > 0 ? (
-            futureTimes.map((time, index) => {
-              const timeDate = new Date(time);
-              const statusColor = getStatusColor(time);
-              const isPastDue = timeDate.getTime() < now.getTime();
-
-              return (
-                <View key={index} style={styles.scheduleItem}>
-                  <View
-                    style={[styles.statusDot, { backgroundColor: statusColor }]}
-                  />
-                  <Text style={[styles.scheduleText, { color: statusColor }]}>
-                    {formatDateTime(time)}
-                    {isPastDue && " (Missed)"}
+            {futureTimes && futureTimes.length > 0 && Array.isArray(futureTimes) && (
+              <View style={styles.medicationSchedule}>
+                <Text style={[styles.scheduleTitle, { color: colors.text }]}>
+                  Upcoming Times
+                </Text>
+                {futureTimes.slice(0, 3).map((time, index) => {
+                  try {
+                    const timeDate = new Date(time);
+                    const statusColor = getStatusColor(time);
+                    const isPastDue = timeDate.getTime() < now.getTime();
+                    return (
+                      <View key={index} style={styles.scheduleItem}>
+                        <View
+                          style={[styles.statusDot, { backgroundColor: statusColor }]}
+                        />
+                        <Text
+                          style={[
+                            styles.scheduleText,
+                            { color: colors.onSurfaceVariant },
+                          ]}
+                        >
+                          {formatDateTime(time)}
+                          {isPastDue && " (Missed)"}
+                        </Text>
+                      </View>
+                    );
+                  } catch (error) {
+                    console.error("Error rendering schedule item:", error);
+                    return null;
+                  }
+                })}
+                {futureTimes.length > 3 && (
+                  <Text
+                    style={[
+                      styles.moreTimesText,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    +{futureTimes.length - 3} more times
                   </Text>
-                </View>
-              );
-            })
-          ) : (
-            <Text
-              style={[
-                styles.noRemindersText,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              All reminders have expired
-            </Text>
-          )}
-        </View>
-      </View>
+                )}
+              </View>
+            )}
+      </InfoCard>
     );
   };
 
+  // --- Main UI ---
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.outline }]}>
+    <>
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+      />
+      <LinearGradient colors={["#2066c1ff", "#1a5bb8"]} style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Medication Planner
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-            {medications.length} active medication
-            {medications.length !== 1 ? "s" : ""}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={manualCleanup}
-          style={[styles.cleanupButton, { backgroundColor: colors.surface }]}
-        >
-          <Ionicons name="refresh-outline" size={20} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      {loading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text
-            style={[styles.loadingText, { color: colors.onSurfaceVariant }]}
-          >
-            Loading medications...
-          </Text>
-        </View>
-      ) : medications.length === 0 ? (
-        <ScrollView
-          contentContainerStyle={styles.centered}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[colors.primary]}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          <View style={styles.emptyStateContainer}>
-            <Ionicons
-              name="medkit-outline"
-              size={80}
-              color={colors.onSurfaceVariant}
-            />
-            <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
-              No Active Medications
-            </Text>
-            <Text
-              style={[
-                styles.emptyStateSubtitle,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              Add your first medication to get started with smart reminders and
-              automatic cleanup.
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Trust Med AI</Text>
+            <Text style={styles.headerSubtitle}>
+              {(medications && medications.length) || 0} active medication
+              {((medications && medications.length) || 0) !== 1 ? "s" : ""}
             </Text>
           </View>
-        </ScrollView>
-      ) : (
-        <FlatList
-          data={medications}
-          renderItem={renderMedicationItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[colors.primary]}
-              tintColor={colors.primary}
-            />
-          }
-        />
-      )}
+          <TouchableOpacity
+            onPress={manualCleanup}
+            style={styles.cleanupButton}
+          >
+            <Ionicons name="refresh-outline" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
 
-      <View style={[styles.footer, { borderTopColor: colors.outline }]}>
-        <GradientButton
-          title="Add New Medication"
-          onPress={() => router.push("/add-medication")}
-        />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Medication List / Loading / Empty State */}
+        {loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text
+              style={[styles.loadingText, { color: colors.onSurfaceVariant }]}
+            >
+              Loading medications...
+            </Text>
+          </View>
+        ) : !medications || medications.length === 0 ? (
+          <ScrollView
+            contentContainerStyle={styles.centered}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.primary]}
+                tintColor={colors.primary}
+              />
+            }
+          >
+            <InfoCard style={styles.emptyStateCard}>
+              <View style={styles.emptyStateContainer}>
+                <Ionicons
+                  name="medkit-outline"
+                  size={64}
+                  color={colors.onSurfaceVariant}
+                  style={styles.emptyStateIcon}
+                />
+                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+                  No Active Medications
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyStateSubtitle,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Add your first medication to get started with smart reminders
+                  and automatic tracking.
+                </Text>
+              </View>
+            </InfoCard>
+          </ScrollView>
+        ) : Array.isArray(medications) && medications.length > 0 ? (
+          <FlatList
+            data={medications.filter(med => med && typeof med === 'object' && med.id)}
+            renderItem={renderMedicationItem}
+            keyExtractor={(item) => item.id || `${Date.now()}-${Math.random()}`}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[colors.primary]}
+                tintColor={colors.primary}
+              />
+            }
+          />
+        ) : (
+          <View style={styles.centered}>
+            <Text style={[styles.loadingText, { color: colors.onSurfaceVariant }]}>
+              Error loading medications
+            </Text>
+          </View>}
+          )
+
+        {/* Footer - Add Medication */}
+        <View style={styles.footer}>
+          <GradientButton
+            title="Add New Medication"
+            onPress={() => router.push("/add-medication")}
+          />
+        </View>
       </View>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   header: {
-    paddingTop: Platform.OS === "ios" ? 60 : 40,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    paddingTop: 50,
+    paddingBottom: 24,
+    paddingHorizontal: 18,
+  },
+  headerContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  headerContent: {
+  headerText: {
     flex: 1,
   },
-  title: { fontSize: 28, fontWeight: "bold" },
-  subtitle: {
-    fontSize: 14,
-    marginTop: 4,
-    opacity: 0.7,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "white",
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.8)",
   },
   cleanupButton: {
-    padding: 12,
+    padding: 8,
     borderRadius: 8,
+  },
+  container: {
+    flex: 1,
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
   },
-  listContent: { padding: 24 },
+  listContent: {
+    padding: 18,
+    paddingBottom: 100,
+  },
+  emptyStateCard: {
+    alignItems: "center",
+    width: "100%",
+  },
   emptyStateContainer: {
-    justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
+  emptyStateIcon: {
+    marginBottom: 16,
+  },
   emptyStateTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginTop: 24,
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 8,
     textAlign: "center",
   },
   emptyStateSubtitle: {
     fontSize: 16,
     textAlign: "center",
-    marginTop: 8,
-    maxWidth: "90%",
-    lineHeight: 24,
+    lineHeight: 22,
   },
   footer: {
-    padding: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
-    borderTopWidth: 1,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 18,
+    paddingBottom: Platform.OS === "ios" ? 34 : 18,
   },
-  medicationItem: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
+  medicationCard: {
+    marginBottom: 16,
   },
   medicationHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 16,
   },
   medicationMainInfo: {
     flexDirection: "row",
     flex: 1,
   },
-  medIcon: { marginRight: 16, marginTop: 4 },
-  medicationInfo: { flex: 1 },
-  medicationName: { fontSize: 18, fontWeight: "bold" },
-  medicationDosage: { fontSize: 14, marginTop: 4 },
+  medIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  medicationInfo: {
+    flex: 1,
+  },
+  medicationName: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  medicationDosage: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
   nextTimeText: {
     fontSize: 13,
     fontWeight: "600",
-    marginTop: 4,
   },
   deleteButton: {
     padding: 8,
@@ -464,32 +558,35 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   medicationSchedule: {
-    paddingLeft: 48,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(128, 128, 128, 0.1)",
   },
   scheduleTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontWeight: "700",
+    marginBottom: 12,
   },
   scheduleItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 8,
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    marginRight: 8,
+    marginRight: 12,
   },
   scheduleText: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 14,
+    lineHeight: 20,
     flex: 1,
   },
-  noRemindersText: {
-    fontSize: 13,
+  moreTimesText: {
+    fontSize: 12,
     fontStyle: "italic",
-    marginLeft: 16,
+    marginLeft: 20,
+    marginTop: 4,
   },
 });

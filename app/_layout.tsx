@@ -12,10 +12,8 @@ import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BLEProvider } from "@/contexts/BLEContext";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
-// This is the main layout for the entire app.
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
 
@@ -25,17 +23,14 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      // Hide the splash screen after the fonts have loaded
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  // If the fonts are not loaded yet, we can return null to show the splash screen.
   if (!fontsLoaded && !fontError) {
     return null;
   }
 
-  // The <Slot /> component now simply renders the active screen without any security checks.
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Slot />
@@ -45,7 +40,6 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   return (
-    // The providers are still here so the rest of the app doesn't break.
     <AuthProvider>
       <BLEProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>

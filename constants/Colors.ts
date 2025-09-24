@@ -1,44 +1,48 @@
+
+
 const tintColorLight = '#6366F1';
 const tintColorDark = '#8B5CF6';
 
+// --- Core Colors ---
 export default {
   light: {
-    text: '#1F2937',
-    background: '#FFFFFF',
+    text: '#181C2F',            // Deep blue-gray, high contrast
+    background: '#F3F6FC',      // Glassy, modern surface
     tint: tintColorLight,
-    tabIconDefault: '#9CA3AF',
+    tabIconDefault: '#B6BCD1',  // Muted blue-gray for inactive icons
     tabIconSelected: tintColorLight,
-    card: '#F9FAFB',
-    cardBorder: '#E5E7EB',
-    primary: '#6366F1',
-    secondary: '#8B5CF6',
-    accent: '#EC4899',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    info: '#3B82F6',
-    surface: '#FFFFFF',
-    surfaceVariant: '#F3F4F6',
-    onSurface: '#1F2937',
+    card: '#FFFFFF',            // Glass card surface
+    cardBorder: '#E5E8F0',      // Subtle border for glass cards
+    primary: '#6366F1',         // Brand blue-violet
+    secondary: '#8B5CF6',       // Accent purple
+    accent: '#EC4899',          // Hot pink accent
+    success: '#10B981',         // Emerald green
+    warning: '#F59E0B',         // Amber
+    error: '#EF4444',           // Red
+    info: '#3B82F6',            // Blue
+    surface: '#F9FAFB',         // Card surface
+    surfaceVariant: '#E5E7EB',  // Card variant
+    onSurface: '#181C2F',
     onSurfaceVariant: '#6B7280',
     outline: '#D1D5DB',
     elevation: {
       level0: 'transparent',
       level1: '#FFFFFF',
-      level2: '#F9FAFB',
-      level3: '#F3F4F6',
+      level2: '#F3F6FC',
+      level3: '#F9FAFB',
       level4: '#E5E7EB',
       level5: '#D1D5DB',
     },
+    warningBackground: 'rgba(245,158,11,0.16)',
   },
   dark: {
-    text: '#F9FAFB',
-    background: '#0F0F23',
+    text: '#F3F6FC',            // Glassy white
+    background: '#181C2F',      // Modern deep blue-black
     tint: tintColorDark,
     tabIconDefault: '#6B7280',
     tabIconSelected: tintColorDark,
-    card: '#1A1A2E',
-    cardBorder: '#2D2D44',
+    card: '#1A213A',
+    cardBorder: '#2D334D',
     primary: '#8B5CF6',
     secondary: '#A855F7',
     accent: '#EC4899',
@@ -46,56 +50,55 @@ export default {
     warning: '#F59E0B',
     error: '#EF4444',
     info: '#3B82F6',
-    surface: '#1A1A2E',
-    surfaceVariant: '#16213E',
-    onSurface: '#F9FAFB',
-    onSurfaceVariant: '#9CA3AF',
+    surface: '#21263A',
+    surfaceVariant: '#1F2235',
+    onSurface: '#F3F6FC',
+    onSurfaceVariant: '#B6BCD1',
     outline: '#374151',
     elevation: {
       level0: 'transparent',
-      level1: '#1A1A2E',
-      level2: '#16213E',
-      level3: '#0F172A',
-      level4: '#0C1421',
-      level5: '#0A0F1A',
+      level1: '#1A213A',
+      level2: '#21263A',
+      level3: '#181C2F',
+      level4: '#16213E',
+      level5: '#1A213A',
     },
+    warningBackground: 'rgba(245,158,11,0.12)',
   },
 } as const;
 
-// Premium gradient presets
+// --- Gradients ---
 export const gradients = {
   primary: ['#667EEA', '#764BA2'] as [string, string],
   secondary: ['#F093FB', '#F5576C'] as [string, string],
-  accent: ['#4FACFE', '#00F2FE'] as [string, string],
+  accent: ['#EC4899', '#F472B6'] as [string, string],
   success: ['#43E97B', '#38F9D7'] as [string, string],
   warning: ['#FA709A', '#FEE140'] as [string, string],
   error: ['#FF6B6B', '#FFE66D'] as [string, string],
   info: ['#A8EDEA', '#FED6E3'] as [string, string],
-  dark: ['#0F0F23', '#1A1A2E'] as [string, string],
+  dark: ['#181C2F', '#1A213A'] as [string, string],
   light: ['#F8FAFC', '#E2E8F0'] as [string, string],
   premium: ['#667EEA', '#764BA2', '#F093FB'] as [string, string, string],
   sunset: ['#FF6B6B', '#FFE66D', '#4ECDC4'] as [string, string, string],
-  ocean: ['#667EEA', '#764BA2', '#F093FB'] as [string, string, string],
   forest: ['#11998E', '#38EF7D'] as [string, string],
-  fire: ['#FF416C', '#FF4B2B'] as [string, string],
   cosmic: ['#FF6B6B', '#4ECDC4', '#45B7D1'] as [string, string, string],
 };
 
-// Glassmorphism styles
+// --- Glassmorphism ---
 export const glassmorphism = {
   light: {
-    background: 'rgba(255, 255, 255, 0.25)',
-    border: 'rgba(255, 255, 255, 0.18)',
-    shadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+    background: 'rgba(255,255,255,0.3)',
+    border: 'rgba(220,222,236,0.18)',
+    shadow: '0 2px 8px 0 rgba(31,38,135,0.08)',
   },
   dark: {
-    background: 'rgba(26, 26, 46, 0.25)',
-    border: 'rgba(255, 255, 255, 0.18)',
-    shadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+    background: 'rgba(32,36,58,0.4)',
+    border: 'rgba(255,255,255,0.10)',
+    shadow: '0 2px 8px 0 rgba(0,0,0,0.12)',
   },
 };
 
-// Severity colors
+// --- Severity Colors ---
 export const severityColors = {
   low: '#10B981',
   medium: '#F59E0B',
@@ -103,7 +106,7 @@ export const severityColors = {
   critical: '#DC2626',
 };
 
-// Module-specific colors
+// --- Module-specific Colors ---
 export const moduleColors = {
   skinAI: {
     primary: '#667EEA',
@@ -137,14 +140,22 @@ export const moduleColors = {
   },
 };
 
-// Animation colors
+// --- Animation Colors ---
 export const animationColors = {
   shimmer: {
     light: ['#F3F4F6', '#E5E7EB', '#F3F4F6'] as [string, string, string],
-    dark: ['#1A1A2E', '#16213E', '#1A1A2E'] as [string, string, string],
+    dark: ['#181C2F', '#21263A', '#181C2F'] as [string, string, string],
   },
   pulse: {
-    light: ['rgba(99, 102, 241, 0.1)', 'rgba(99, 102, 241, 0.3)', 'rgba(99, 102, 241, 0.1)'] as [string, string, string],
-    dark: ['rgba(139, 92, 246, 0.1)', 'rgba(139, 92, 246, 0.3)', 'rgba(139, 92, 246, 0.1)'] as [string, string, string],
+    light: [
+      'rgba(99,102,241,0.09)',
+      'rgba(99,102,241,0.18)',
+      'rgba(99,102,241,0.09)',
+    ] as [string, string, string],
+    dark: [
+      'rgba(139,92,246,0.10)',
+      'rgba(139,92,246,0.23)',
+      'rgba(139,92,246,0.10)',
+    ] as [string, string, string],
   },
 };

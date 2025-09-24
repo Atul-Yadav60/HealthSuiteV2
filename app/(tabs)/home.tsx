@@ -45,7 +45,6 @@ type Warning = {
   message: string;
 };
 
-// --- MOCK DATA for Development (Fallback) ---
 const MOCK_ENV_DATA: EnvironmentalData = {
   aqi: 151,
   temp: 25,
@@ -106,13 +105,11 @@ export default function HomeScreen() {
         const data = await fetchEnvironmentalData(location);
         setEnvData(data);
       } catch (err) {
-        console.error("Failed to load real API data:", err);
         setEnvData(MOCK_ENV_DATA);
       } finally {
         setDataLoading(false);
       }
     } else {
-      console.log("Bypassing login: Loading mock data for development.");
       setEnvData(MOCK_ENV_DATA);
       setDataLoading(false);
     }
@@ -189,13 +186,10 @@ export default function HomeScreen() {
     if (action) router.push(action.module as any);
   };
 
-  // --- THIS IS THE FIX ---
   const handleModulePress = (moduleId: string) => {
-    // If the user clicks the Med Planner, go directly to the functional screen
     if (moduleId === "medPlanner") {
       router.push("/(tabs)/medPlanner");
     } else {
-      // For all other modules, go to the descriptive page
       router.push(`/modules/${moduleId}`);
     }
   };
@@ -424,75 +418,16 @@ export default function HomeScreen() {
           ))}
         </View>
       </Animated.View>
-
-      {/* <Animated.View
-        style={[
-          styles.section,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-        ]}
-      >
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Recent Activity
-        </Text>
-        <GlassCard style={styles.activityCard} gradient>
-          <View style={styles.activityItem}>
-            <View
-              style={[
-                styles.activityIcon,
-                { backgroundColor: colors.primary + "20" },
-              ]}
-            >
-              <Ionicons name="camera" size={20} color={colors.primary} />
-            </View>
-            <View style={styles.activityContent}>
-              <Text style={[styles.activityTitle, { color: colors.text }]}>
-                Skin scan completed
-              </Text>
-              <Text
-                style={[
-                  styles.activityTime,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                2 hours ago
-              </Text>
-            </View>
-          </View>
-          <View style={styles.activityItem}>
-            <View
-              style={[
-                styles.activityIcon,
-                { backgroundColor: colors.secondary + "20" },
-              ]}
-            >
-              <Ionicons name="heart" size={20} color={colors.secondary} />
-            </View>
-            <View style={styles.activityContent}>
-              <Text style={[styles.activityTitle, { color: colors.text }]}>
-                Mood check-in
-              </Text>
-              <Text
-                style={[
-                  styles.activityTime,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                Yesterday
-              </Text>
-            </View>
-          </View>
-        </GlassCard>
-      </Animated.View> */}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  contentContainer: { paddingBottom: 100 },
+  contentContainer: { paddingBottom: 60 },
   header: {
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingTop: 50,
+    paddingBottom: 10,
     paddingHorizontal: 24,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
@@ -524,7 +459,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: "#FFFFFF",
   },
-  section: { paddingHorizontal: 24, marginTop: 32 },
+  section: { paddingHorizontal: 20, marginTop: 32 },
   sectionTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 16 },
   quickActionsContainer: {
     flexDirection: "row",
@@ -589,21 +524,4 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     lineHeight: 20,
   },
-  activityCard: { padding: 20 },
-  activityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  activityIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  activityContent: { flex: 1 },
-  activityTitle: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
-  activityTime: { fontSize: 14, opacity: 0.7 },
 });

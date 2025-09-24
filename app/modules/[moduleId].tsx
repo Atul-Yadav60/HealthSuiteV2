@@ -1,24 +1,24 @@
-import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import React from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
+import React from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
-import { GlassCard } from '../../components/ui/GlassCard';
-import { GradientButton } from '../../components/ui/GradientButton';
-import { MODULES } from '../../constants/AppConfig';
-import Colors from '../../constants/Colors';
-import { useColorScheme } from '../../hooks/useColorScheme';
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { GlassCard } from "../../components/ui/GlassCard";
+import { GradientButton } from "../../components/ui/GradientButton";
+import { MODULES } from "../../constants/AppConfig";
+import Colors from "../../constants/Colors";
+import { useColorScheme } from "../../hooks/useColorScheme";
 
 export default function ModuleScreen() {
   const { moduleId } = useLocalSearchParams();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'dark'];
-  
+  const colors = Colors[colorScheme ?? "dark"];
+
   const module = MODULES[moduleId as keyof typeof MODULES];
 
   if (!module) {
@@ -37,7 +37,7 @@ export default function ModuleScreen() {
       contentContainerStyle={styles.content}
     >
       {/* Header */}
-      <View style={styles.header}>
+      <GlassCard style={styles.headerCard}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
@@ -45,29 +45,38 @@ export default function ModuleScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <View style={[styles.moduleIcon, { backgroundColor: module.color + '20' }]}>
-            <Ionicons name={module.icon as any} size={32} color={module.color} />
+          <View
+            style={[
+              styles.moduleIcon,
+              { backgroundColor: module.color + "20" },
+            ]}
+          >
+            <Ionicons
+              name={module.icon as any}
+              size={40}
+              color={module.color}
+            />
           </View>
           <Text style={[styles.moduleTitle, { color: colors.text }]}>
             {module.name}
           </Text>
-          <Text style={[styles.moduleSubtitle, { color: colors.onSurfaceVariant }]}>
+          <Text
+            style={[styles.moduleSubtitle, { color: colors.onSurfaceVariant }]}
+          >
             {module.subtitle}
           </Text>
         </View>
-      </View>
+      </GlassCard>
 
       {/* Description */}
-      <View style={styles.section}>
-        <GlassCard style={styles.descriptionCard}>
-          <Text style={[styles.descriptionTitle, { color: colors.text }]}>
-            About {module.name}
-          </Text>
-          <Text style={[styles.descriptionText, { color: colors.onSurfaceVariant }]}>
-            {module.description}
-          </Text>
-        </GlassCard>
-      </View>
+      <GlassCard style={styles.descriptionCard}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          About {module.name}
+        </Text>
+        <Text style={[styles.sectionText, { color: colors.onSurfaceVariant }]}>
+          {module.description}
+        </Text>
+      </GlassCard>
 
       {/* Features */}
       <View style={styles.section}>
@@ -75,12 +84,15 @@ export default function ModuleScreen() {
           Features
         </Text>
         <View style={styles.featuresContainer}>
-          {module.features.map((feature, index) => (
-            <GlassCard key={index} style={styles.featureCard}>
+          {module.features.map((feature, idx) => (
+            <GlassCard key={idx} style={styles.featureCard}>
               <View style={styles.featureContent}>
-                <View style={[styles.featureIcon, { backgroundColor: module.color + '20' }]}>
-                  <Ionicons name="checkmark" size={16} color={module.color} />
-                </View>
+                <Ionicons
+                  name="checkmark"
+                  size={20}
+                  color={module.color}
+                  style={{ marginRight: 12 }}
+                />
                 <Text style={[styles.featureText, { color: colors.text }]}>
                   {feature}
                 </Text>
@@ -94,10 +106,7 @@ export default function ModuleScreen() {
       <View style={styles.section}>
         <GradientButton
           title={`Start ${module.name}`}
-          onPress={() => {
-            // Handle module start
-            console.log(`Starting ${module.name}`);
-          }}
+          onPress={() => router.push(`/modules/${module.id}`)}
           style={styles.primaryButton}
         />
         <TouchableOpacity
@@ -114,108 +123,76 @@ export default function ModuleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    paddingBottom: 20,
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 24,
+  container: { flex: 1 },
+  content: { paddingBottom: 30 },
+  headerCard: {
+    padding: 24,
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 32,
+    marginBottom: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
+    marginRight: 16,
+    padding: 8,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  headerContent: {
-    alignItems: 'center',
-  },
+  headerContent: { flex: 1, alignItems: "center" },
   moduleIcon: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
   },
   moduleTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   moduleSubtitle: {
     fontSize: 16,
-    textAlign: 'center',
+    textAlign: "center",
     opacity: 0.8,
   },
+  descriptionCard: {
+    padding: 20,
+    marginBottom: 8,
+  },
   section: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 8,
     marginTop: 24,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontWeight: "bold",
+    marginBottom: 14,
   },
-  descriptionCard: {
-    padding: 20,
-  },
-  descriptionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  descriptionText: {
+  sectionText: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 22,
   },
-  featuresContainer: {
-    gap: 12,
-  },
-  featureCard: {
-    padding: 16,
-  },
-  featureContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  featureIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  featureText: {
-    fontSize: 16,
-    flex: 1,
-  },
-  primaryButton: {
-    marginBottom: 12,
-  },
+  featuresContainer: { gap: 12 },
+  featureCard: { padding: 16, marginBottom: 6 },
+  featureContent: { flexDirection: "row", alignItems: "center" },
+  featureText: { fontSize: 16 },
+  primaryButton: { marginBottom: 10 },
   secondaryButton: {
     paddingVertical: 16,
-    paddingHorizontal: 24,
     borderRadius: 12,
     borderWidth: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   secondaryButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   errorText: {
     fontSize: 18,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 100,
   },
 });

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -8,11 +9,10 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  ActivityIndicator,
   Alert,
+  StatusBar,
 } from "react-native";
-
-import { GlassCard } from "@/components/ui/GlassCard";
+import { InfoCard } from "@/components/ui/InfoCard";
 import { GradientButton } from "@/components/ui/GradientButton";
 import Colors from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -40,143 +40,261 @@ export default function DrugInteractionScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: colors.outline }]}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Drug Interaction
-        </Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
-          Enter two or more drug names to check for potential interactions. For
-          example, "Does Aspirin interact with Warfarin?"
-        </Text>
-
-        <TextInput
-          style={[
-            styles.input,
-            {
-              color: colors.text,
-              borderColor: colors.outline,
-              backgroundColor: colors.surface,
-            },
-          ]}
-          placeholder="Type your question here..."
-          placeholderTextColor={colors.onSurfaceVariant}
-          value={query}
-          onChangeText={setQuery}
-          multiline
-        />
-
-        <GradientButton
-          title="Check Interaction"
-          onPress={handleCheckInteraction}
-          loading={loading}
-          icon="search-outline"
-        />
-
-        {results && (
-          <GlassCard style={styles.resultsCard}>
-            <Text style={[styles.resultsTitle, { color: colors.text }]}>
-              Results
+    <>
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+      />
+      <LinearGradient colors={["#2066c1ff", "#1a5bb8"]} style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Drug Interactions</Text>
+            <Text style={styles.headerSubtitle}>
+              Check potential drug interactions
             </Text>
-            {results.detected_drugs && (
-              <Text
-                style={[
-                  styles.resultsSubtitle,
-                  { color: colors.onSurfaceVariant },
-                ]}
-              >
-                Detected Drugs: {results.detected_drugs.join(", ")}
-              </Text>
-            )}
+          </View>
+        </View>
+      </LinearGradient>
 
-            {results.interactions &&
-              results.interactions.map((interaction: any, index: number) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.interactionItem,
-                    { borderTopColor: colors.outline },
-                  ]}
-                >
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          {/* Info Banner */}
+          <InfoCard style={styles.infoBanner}>
+            <View style={styles.bannerContent}>
+              <Ionicons
+                name="information-circle"
+                size={24}
+                color={colors.primary}
+                style={styles.bannerIcon}
+              />
+              <Text
+                style={[styles.bannerText, { color: colors.onSurfaceVariant }]}
+              >
+                Enter two or more drug names to check for potential interactions
+                and safety information.
+              </Text>
+            </View>
+          </InfoCard>
+
+          {/* Input Section */}
+          <InfoCard>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Drug Query
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  color: colors.text,
+                  borderColor: colors.outline,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+              placeholder="e.g., aspirin and warfarin, or describe your medications..."
+              placeholderTextColor={colors.onSurfaceVariant}
+              value={query}
+              onChangeText={setQuery}
+              multiline
+            />
+            <GradientButton
+              title="Check Interactions"
+              onPress={handleCheckInteraction}
+              loading={loading}
+              icon="search-outline"
+              style={styles.checkButton}
+            />
+          </InfoCard>
+
+          {/* Results Section */}
+          {results && (
+            <InfoCard>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Analysis Results
+              </Text>
+
+              {results.detected_drugs && results.detected_drugs.length > 0 && (
+                <View style={styles.detectedDrugs}>
                   <Text
-                    style={[styles.interactionPair, { color: colors.text }]}
+                    style={[styles.subsectionTitle, { color: colors.text }]}
                   >
-                    {interaction.DrugName_A} & {interaction.DrugName_B}
+                    Detected Medications
                   </Text>
-                  {interaction.message ? (
-                    <Text
-                      style={[
-                        styles.interactionDetails,
-                        { color: colors.onSurfaceVariant },
-                      ]}
-                    >
-                      {interaction.message}
-                    </Text>
-                  ) : (
-                    <>
-                      <Text
-                        style={[
-                          styles.interactionLevel,
-                          {
-                            color:
-                              interaction.Interaction_Level === "Major"
-                                ? colors.error
-                                : colors.warning,
-                          },
-                        ]}
-                      >
-                        Level: {interaction.Interaction_Level}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.interactionDetails,
-                          { color: colors.onSurfaceVariant },
-                        ]}
-                      >
-                        {interaction.Interaction_Details}
-                      </Text>
-                    </>
+                  <View style={styles.drugTags}>
+                    {results.detected_drugs.map(
+                      (drug: string, index: number) => (
+                        <View
+                          key={index}
+                          style={[
+                            styles.drugTag,
+                            { backgroundColor: colors.primary + "20" },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.drugTagText,
+                              { color: colors.primary },
+                            ]}
+                          >
+                            {drug}
+                          </Text>
+                        </View>
+                      )
+                    )}
+                  </View>
+                </View>
+              )}
+
+              {results.interactions && results.interactions.length > 0 ? (
+                <View style={styles.interactionsSection}>
+                  <Text
+                    style={[styles.subsectionTitle, { color: colors.text }]}
+                  >
+                    Potential Interactions
+                  </Text>
+                  {results.interactions.map(
+                    (interaction: any, index: number) => (
+                      <View key={index} style={styles.interactionCard}>
+                        <View style={styles.interactionHeader}>
+                          <Text
+                            style={[styles.drugPair, { color: colors.text }]}
+                          >
+                            {interaction.DrugName_A} ↔ {interaction.DrugName_B}
+                          </Text>
+                          {interaction.Interaction_Level && (
+                            <View
+                              style={[
+                                styles.levelBadge,
+                                {
+                                  backgroundColor:
+                                    interaction.Interaction_Level === "Major"
+                                      ? colors.error + "20"
+                                      : "#FFA500" + "20",
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.levelText,
+                                  {
+                                    color:
+                                      interaction.Interaction_Level === "Major"
+                                        ? colors.error
+                                        : "#FFA500",
+                                  },
+                                ]}
+                              >
+                                {interaction.Interaction_Level}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text
+                          style={[
+                            styles.interactionDescription,
+                            { color: colors.onSurfaceVariant },
+                          ]}
+                        >
+                          {interaction.message ||
+                            interaction.Interaction_Details}
+                        </Text>
+                      </View>
+                    )
                   )}
                 </View>
-              ))}
-          </GlassCard>
-        )}
+              ) : (
+                <View style={styles.noInteractions}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={32}
+                    color={colors.success || "#10B981"}
+                    style={styles.successIcon}
+                  />
+                  <Text
+                    style={[styles.noInteractionsText, { color: colors.text }]}
+                  >
+                    No significant interactions detected
+                  </Text>
+                  <Text
+                    style={[
+                      styles.noInteractionsSubtext,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Always consult your healthcare provider before combining
+                    medications.
+                  </Text>
+                </View>
+              )}
+            </InfoCard>
+          )}
+        </View>
       </ScrollView>
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
   header: {
+    paddingTop: 50,
+    paddingBottom: 24,
+    paddingHorizontal: 18,
+  },
+  headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 60,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
+    gap: 16,
   },
-  backButton: { padding: 8 },
-  title: {
+  backButton: {
+    padding: 8,
+  },
+  headerText: {
+    flex: 1,
+  },
+  headerTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    marginLeft: 16,
+    fontWeight: "700",
+    color: "white",
+    marginBottom: 4,
   },
-  scrollContent: { padding: 24, gap: 20 },
-  description: {
+  headerSubtitle: {
     fontSize: 16,
-    lineHeight: 24,
-    textAlign: "center",
-    marginBottom: 10,
+    color: "rgba(255, 255, 255, 0.8)",
+  },
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: 18,
+    gap: 20,
+  },
+  infoBanner: {
+    backgroundColor: "rgba(32, 102, 193, 0.05)",
+  },
+  bannerContent: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  bannerIcon: {
+    marginTop: 2,
+  },
+  bannerText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 16,
   },
   input: {
     minHeight: 100,
@@ -185,39 +303,85 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     textAlignVertical: "top",
-  },
-  resultsCard: {
-    marginTop: 20,
-    padding: 20,
-  },
-  resultsTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  resultsSubtitle: {
-    fontSize: 14,
     marginBottom: 16,
-    fontStyle: "italic",
   },
-  interactionItem: {
-    paddingTop: 16,
-    marginTop: 16,
-    borderTopWidth: 1,
+  checkButton: {
+    marginTop: 4,
   },
-  interactionPair: {
-    fontSize: 18,
+  subsectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  detectedDrugs: {
+    marginBottom: 20,
+  },
+  drugTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  drugTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  drugTagText: {
+    fontSize: 14,
     fontWeight: "600",
     textTransform: "capitalize",
   },
-  interactionLevel: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 4,
+  interactionsSection: {
+    gap: 12,
   },
-  interactionDetails: {
+  interactionCard: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(128, 128, 128, 0.05)",
+    marginBottom: 12,
+  },
+  interactionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  drugPair: {
+    fontSize: 16,
+    fontWeight: "700",
+    flex: 1,
+    textTransform: "capitalize",
+  },
+  levelBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  levelText: {
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  interactionDescription: {
     fontSize: 14,
     lineHeight: 20,
-    marginTop: 4,
+  },
+  noInteractions: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  successIcon: {
+    marginBottom: 12,
+  },
+  noInteractionsText: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  noInteractionsSubtext: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   StyleProp,
   ViewStyle,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "../../hooks/useColorScheme";
@@ -18,7 +19,7 @@ interface MessageModalProps {
   title: string;
   message: string;
   onClose: () => void;
-  type?: "success" | "error";
+  type?: "success" | "error" | "info";
 }
 
 export default function MessageModal({
@@ -30,12 +31,23 @@ export default function MessageModal({
 }: MessageModalProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "dark"];
-  const iconName = type === "success" ? "checkmark-circle" : "alert-circle";
-  const iconColor = type === "success" ? colors.success : colors.error;
+  const iconName =
+    type === "success"
+      ? "checkmark-circle"
+      : type === "info"
+      ? "information-circle"
+      : "alert-circle";
+  const iconColor =
+    type === "success"
+      ? colors.success
+      : type === "info"
+      ? colors.info
+      : colors.error;
 
   const modalViewStyle: StyleProp<ViewStyle> = [
     styles.modalView,
     { backgroundColor: colors.card },
+    Platform.OS === "web" ? { boxShadow: "0px 8px 32px rgba(0,0,0,0.22)" } : {},
   ];
 
   return (
@@ -52,6 +64,7 @@ export default function MessageModal({
             size={48}
             color={iconColor}
             style={{ marginBottom: 15 }}
+            accessibilityLabel={type === "success" ? "Success" : "Error"}
           />
           <Text style={[styles.modalTitle, { color: colors.text }]}>
             {title}
@@ -75,8 +88,8 @@ const styles = StyleSheet.create({
   },
   modalView: {
     margin: 20,
-    borderRadius: 20,
-    padding: 25,
+    borderRadius: 22,
+    padding: 28,
     alignItems: "center",
     width: "85%",
   },

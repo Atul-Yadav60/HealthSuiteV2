@@ -6,38 +6,40 @@ import {
   TouchableOpacity,
   View,
   ViewStyle,
+  Platform,
 } from "react-native";
-// Import the TYPE for a single quick action
 import { QuickAction } from "../../constants/AppConfig";
 import Colors from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
-// Define the properties the component accepts
 type QuickActionButtonProps = {
-  // The component now expects the full action object
   action: QuickAction;
   onPress: () => void;
   style?: ViewStyle;
 };
 
 export function QuickActionButton({
-  action, // Use the action object directly
+  action,
   onPress,
   style,
 }: QuickActionButtonProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? "dark"];
-
-  // If for some reason the action is invalid, render nothing.
-  if (!action) {
-    return null;
-  }
+  if (!action) return null;
 
   return (
     <TouchableOpacity
-      style={[styles.container, style]}
+      style={[
+        styles.container,
+        style,
+        Platform.OS === "web"
+          ? { boxShadow: "0px 4px 12px rgba(0,0,0,0.12)" }
+          : {},
+      ]}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.76}
+      accessibilityRole="button"
+      accessibilityLabel={action.title}
     >
       <View
         style={[
@@ -48,7 +50,7 @@ export function QuickActionButton({
           },
         ]}
       >
-        <Ionicons name={action.icon} size={24} color="white" />
+        <Ionicons name={action.icon} size={28} color="white" />
       </View>
       <Text style={[styles.title, { color: colors.onSurfaceVariant }]}>
         {action.title}
@@ -61,6 +63,11 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     gap: 8,
+    minWidth: 80,
+    maxWidth: 120,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginHorizontal: 4,
   },
   iconContainer: {
     width: 64,
@@ -68,14 +75,16 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    // Subtle shadow instead of big shadow
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    marginBottom: 4,
   },
-  label: {
-    fontSize: 12,
-    fontWeight: "600",
+  title: {
+    fontSize: 13,
+    fontWeight: "700",
     textAlign: "center",
   },
 });

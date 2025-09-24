@@ -108,7 +108,7 @@ export function GlassCard({
             {
               borderRadius,
               padding,
-              borderColor: glass.border,
+              // Remove borderColor to eliminate visible borders
             },
           ]}
         >
@@ -136,7 +136,7 @@ export function GlassCard({
               borderRadius,
               padding,
               backgroundColor: colors.card,
-              borderColor: colors.cardBorder,
+              // Remove borderColor to eliminate visible borders
             },
           ]}
         >
@@ -163,30 +163,27 @@ export function GlassCard({
 }
 
 const styles = StyleSheet.create({
-  pressable: {
-    // Container for pressable cards
-  },
+  pressable: {},
   container: {
     ...Platform.select({
       web: {
-        boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.06)",
       },
       default: {
         shadowColor: "#000",
-        shadowOffset: {
-          width: 0,
-          height: 4,
-        },
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
       },
     }),
   },
   gradientContainer: {
-    borderWidth: 1,
+    // Remove borderWidth to eliminate rectangular borders
+    // borderWidth: 1,
     overflow: "hidden",
   },
   blurView: {
-    borderWidth: 1,
+    // Remove borderWidth to eliminate rectangular borders
+    // borderWidth: 1,
     overflow: "hidden",
   },
 });

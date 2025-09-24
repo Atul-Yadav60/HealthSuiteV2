@@ -65,7 +65,6 @@ export default function PrescriptionScannerScreen() {
         },
       });
     } catch (error: any) {
-      console.error("Failed to capture or process prescription:", error);
       setModalMessage(error.message || "An unknown error occurred.");
       setModalVisible(true);
     } finally {

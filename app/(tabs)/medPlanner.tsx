@@ -14,15 +14,18 @@ import {
   Platform,
   RefreshControl,
   StatusBar,
+  Dimensions,
 } from "react-native";
-import { InfoCard } from "../../components/ui/InfoCard";
 import { GradientButton } from "../../components/ui/GradientButton";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
+import { useAuth } from "../../hooks/useAuth";
 import {
   fetchAndScheduleMedications,
   cleanupExpiredMedications,
 } from "../../services/NotificationService";
+
+const { width } = Dimensions.get("window");
 
 // --- Medication Interface ---
 interface Medication {
@@ -36,45 +39,79 @@ interface Medication {
   created_at?: string;
 }
 
+// Simple Card component for this screen
+const Card = ({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: any;
+}) => {
+  const colorScheme = useColorScheme();
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
+
+  return (
+    <View
+      style={[
+        {
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 18,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 4,
+          elevation: 3,
+        },
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+};
+
 export default function MedPlannerScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
+  const { session, user } = useAuth();
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // --- Load Medications (with cleanup) ---
   const loadMedications = useCallback(async () => {
-    const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
-    if (!testUserID || testUserID === "YOUR_TEST_USER_ID_HERE") {
-      Alert.alert(
-        "Configuration Error",
-        "Please set your Test User ID in the medication planner"
-      );
+    if (!user?.id) {
+      console.log("No authenticated user found");
       setLoading(false);
       return;
     }
 
     try {
       setLoading(true);
-      const upcomingMedications = await fetchAndScheduleMedications(testUserID);
-      
+      console.log("Loading medications for user:", user.id);
+      const upcomingMedications = await fetchAndScheduleMedications(user.id);
+
       // Debug logging to see what we actually get
       console.log("Raw upcomingMedications:", upcomingMedications);
       console.log("Type of upcomingMedications:", typeof upcomingMedications);
       console.log("Is array:", Array.isArray(upcomingMedications));
-      
+
       // Ensure we always have an array, even if the API returns null/undefined
-      const safeMedications = Array.isArray(upcomingMedications) ? upcomingMedications : [];
-      
+      const safeMedications = Array.isArray(upcomingMedications)
+        ? upcomingMedications
+        : [];
+
       // Validate each medication has the expected structure
-      const validatedMedications = safeMedications.filter((med) => {
-        return med && typeof med === 'object' && med.id && med.name;
-      }).map((med) => ({
-        ...med,
-        schedule: med.schedule || { type: "", times: [] }
-      }));
-      
+      const validatedMedications = safeMedications
+        .filter((med) => {
+          return med && typeof med === "object" && med.id && med.name;
+        })
+        .map((med) => ({
+          ...med,
+          schedule: med.schedule || { type: "", times: [] },
+        }));
+
       console.log("Validated medications:", validatedMedications);
       setMedications(validatedMedications);
     } catch (error: any) {
@@ -85,7 +122,7 @@ export default function MedPlannerScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -199,8 +236,8 @@ export default function MedPlannerScreen() {
   // --- Render for medication cards ---
   const renderMedicationItem = ({ item }: { item: Medication }) => {
     console.log("Rendering medication item:", item);
-    
-    if (!item || typeof item !== 'object') {
+
+    if (!item || typeof item !== "object") {
       console.error("Invalid medication item:", item);
       return null;
     }
@@ -208,8 +245,15 @@ export default function MedPlannerScreen() {
     const now = new Date();
     // Add extra safety checks for schedule and times
     const scheduleTimes = item.schedule?.times;
-    console.log("Schedule times:", scheduleTimes, "Type:", typeof scheduleTimes, "IsArray:", Array.isArray(scheduleTimes));
-    
+    console.log(
+      "Schedule times:",
+      scheduleTimes,
+      "Type:",
+      typeof scheduleTimes,
+      "IsArray:",
+      Array.isArray(scheduleTimes)
+    );
+
     const futureTimes = Array.isArray(scheduleTimes)
       ? scheduleTimes.filter((t) => {
           try {
@@ -221,9 +265,9 @@ export default function MedPlannerScreen() {
           }
         })
       : [];
-      
+
     console.log("Future times:", futureTimes);
-    
+
     const nextTime =
       futureTimes.length > 0
         ? futureTimes
@@ -240,7 +284,7 @@ export default function MedPlannerScreen() {
         : null;
 
     return (
-      <InfoCard style={styles.medicationCard}>
+      <Card style={styles.medicationCard}>
         <View style={styles.medicationHeader}>
           <View style={styles.medicationMainInfo}>
             <View
@@ -283,50 +327,55 @@ export default function MedPlannerScreen() {
           </TouchableOpacity>
         </View>
 
-            {futureTimes && futureTimes.length > 0 && Array.isArray(futureTimes) && (
-              <View style={styles.medicationSchedule}>
-                <Text style={[styles.scheduleTitle, { color: colors.text }]}>
-                  Upcoming Times
+        {futureTimes &&
+          futureTimes.length > 0 &&
+          Array.isArray(futureTimes) && (
+            <View style={styles.medicationSchedule}>
+              <Text style={[styles.scheduleTitle, { color: colors.text }]}>
+                Upcoming Times
+              </Text>
+              {futureTimes.slice(0, 3).map((time, index) => {
+                try {
+                  const timeDate = new Date(time);
+                  const statusColor = getStatusColor(time);
+                  const isPastDue = timeDate.getTime() < now.getTime();
+                  return (
+                    <View key={index} style={styles.scheduleItem}>
+                      <View
+                        style={[
+                          styles.statusDot,
+                          { backgroundColor: statusColor },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.scheduleText,
+                          { color: colors.onSurfaceVariant },
+                        ]}
+                      >
+                        {formatDateTime(time)}
+                        {isPastDue && " (Missed)"}
+                      </Text>
+                    </View>
+                  );
+                } catch (error) {
+                  console.error("Error rendering schedule item:", error);
+                  return null;
+                }
+              })}
+              {futureTimes.length > 3 && (
+                <Text
+                  style={[
+                    styles.moreTimesText,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  +{futureTimes.length - 3} more times
                 </Text>
-                {futureTimes.slice(0, 3).map((time, index) => {
-                  try {
-                    const timeDate = new Date(time);
-                    const statusColor = getStatusColor(time);
-                    const isPastDue = timeDate.getTime() < now.getTime();
-                    return (
-                      <View key={index} style={styles.scheduleItem}>
-                        <View
-                          style={[styles.statusDot, { backgroundColor: statusColor }]}
-                        />
-                        <Text
-                          style={[
-                            styles.scheduleText,
-                            { color: colors.onSurfaceVariant },
-                          ]}
-                        >
-                          {formatDateTime(time)}
-                          {isPastDue && " (Missed)"}
-                        </Text>
-                      </View>
-                    );
-                  } catch (error) {
-                    console.error("Error rendering schedule item:", error);
-                    return null;
-                  }
-                })}
-                {futureTimes.length > 3 && (
-                  <Text
-                    style={[
-                      styles.moreTimesText,
-                      { color: colors.onSurfaceVariant },
-                    ]}
-                  >
-                    +{futureTimes.length - 3} more times
-                  </Text>
-                )}
-              </View>
-            )}
-      </InfoCard>
+              )}
+            </View>
+          )}
+      </Card>
     );
   };
 
@@ -339,7 +388,7 @@ export default function MedPlannerScreen() {
       <LinearGradient colors={["#2066c1ff", "#1a5bb8"]} style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Trust Med AI</Text>
+            <Text style={styles.headerTitle}>Medications</Text>
             <Text style={styles.headerSubtitle}>
               {(medications && medications.length) || 0} active medication
               {((medications && medications.length) || 0) !== 1 ? "s" : ""}
@@ -377,7 +426,7 @@ export default function MedPlannerScreen() {
               />
             }
           >
-            <InfoCard style={styles.emptyStateCard}>
+            <Card style={styles.emptyStateCard}>
               <View style={styles.emptyStateContainer}>
                 <Ionicons
                   name="medkit-outline"
@@ -398,11 +447,13 @@ export default function MedPlannerScreen() {
                   and automatic tracking.
                 </Text>
               </View>
-            </InfoCard>
+            </Card>
           </ScrollView>
         ) : Array.isArray(medications) && medications.length > 0 ? (
           <FlatList
-            data={medications.filter(med => med && typeof med === 'object' && med.id)}
+            data={medications.filter(
+              (med) => med && typeof med === "object" && med.id
+            )}
             renderItem={renderMedicationItem}
             keyExtractor={(item) => item.id || `${Date.now()}-${Math.random()}`}
             contentContainerStyle={styles.listContent}
@@ -418,14 +469,16 @@ export default function MedPlannerScreen() {
           />
         ) : (
           <View style={styles.centered}>
-            <Text style={[styles.loadingText, { color: colors.onSurfaceVariant }]}>
+            <Text
+              style={[styles.loadingText, { color: colors.onSurfaceVariant }]}
+            >
               Error loading medications
             </Text>
-          </View>}
-          )
+          </View>
+        )}
 
         {/* Footer - Add Medication */}
-        <View style={styles.footer}>
+        <View style={styles.footer} pointerEvents="box-none">
           <GradientButton
             title="Add New Medication"
             onPress={() => router.push("/add-medication")}
@@ -505,11 +558,11 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 18,
-    paddingBottom: Platform.OS === "ios" ? 34 : 18,
+    bottom: Platform.OS === "ios" ? 95 : 75, // Position above tab bar
+    left: 18,
+    right: 18,
+    zIndex: 1, // Above other elements to be clickable
+    backgroundColor: "transparent",
   },
   medicationCard: {
     marginBottom: 16,

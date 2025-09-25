@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,15 +9,47 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Animated,
+  RefreshControl,
 } from "react-native";
 import { InfoCard } from "../../components/ui/InfoCard";
 import { QuickActionButton } from "../../components/ui/QuickActionButton";
-import Colors from "../../constants/Colors";
+import { GlassCard } from "../../components/ui/GlassCard";
+import DefaultColors, { gradients, Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 export default function SkinScanScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  // Refresh state
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
 
   const scanFeatures = [
     {
@@ -51,76 +83,119 @@ export default function SkinScanScreen() {
   ];
 
   return (
-    <>
-      <StatusBar
-        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
-      />
-      <LinearGradient colors={["#2066c1ff", "#1a5bb8"]} style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Skin AI Scanner</Text>
-            <Text style={styles.headerSubtitle}>
-              AI-powered skin analysis and guidance
-            </Text>
-          </View>
-        </View>
-      </LinearGradient>
-
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        showsVerticalScrollIndicator={false}
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.contentContainer}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={[colors.primary]}
+          tintColor={colors.primary}
+        />
+      }
+    >
+      <LinearGradient
+        colors={gradients.premium}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <View style={styles.content}>
-          {/* Coming Soon Banner */}
-          <InfoCard style={styles.bannerCard}>
-            <View style={styles.bannerContent}>
-              <Ionicons
-                name="construct"
-                size={48}
-                color={colors.primary}
-                style={styles.bannerIcon}
-              />
-              <Text style={[styles.bannerTitle, { color: colors.text }]}>
-                Coming Soon
+        <Animated.View
+          style={[
+            styles.headerContent,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          <View style={styles.greetingContainer}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+            <View style={styles.headerText}>
+              <Text style={[styles.greeting, { color: "white" }]}>
+                Skin AI Scanner ✨
               </Text>
               <Text
-                style={[
-                  styles.bannerDescription,
-                  { color: colors.onSurfaceVariant },
-                ]}
+                style={[styles.subtitle, { color: "rgba(255,255,255,0.8)" }]}
               >
-                We're developing advanced AI technology to help you analyze skin
-                conditions using your device camera. Get ready for
-                professional-grade skin analysis at your fingertips.
+                AI-powered skin analysis and guidance
               </Text>
             </View>
-          </InfoCard>
-
-          {/* Features Preview */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Upcoming Features
-            </Text>
-            <View style={styles.featuresGrid}>
-              {scanFeatures.map((feature) => (
-                <QuickActionButton
-                  key={feature.id}
-                  action={feature}
-                  onPress={() => {}}
-                  style={styles.featureButton}
-                />
-              ))}
-            </View>
           </View>
+        </Animated.View>
+      </LinearGradient>
+      <View style={styles.content}>
+        {/* Coming Soon Banner */}
+        <GlassCard style={styles.bannerCard} animated={true}>
+          <View style={styles.bannerContent}>
+            <Ionicons
+              name="construct"
+              size={48}
+              color={colors.primary}
+              style={styles.bannerIcon}
+            />
+            <Text style={[styles.bannerTitle, { color: colors.text }]}>
+              Coming Soon
+            </Text>
+            <Text
+              style={[
+                styles.bannerDescription,
+                { color: colors.onSurfaceVariant },
+              ]}
+            >
+              We're developing advanced AI technology to help you analyze skin
+              conditions using your device camera. Get ready for
+              professional-grade skin analysis at your fingertips.
+            </Text>
+          </View>
+        </GlassCard>
 
-          {/* How it Works */}
-          <InfoCard>
+        {/* Features Grid */}
+        <View style={styles.featuresSection}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Upcoming Features
+          </Text>
+          <View style={styles.cardRow}>
+            <InfoCard
+              icon="scan"
+              label="AI Analysis"
+              value="Smart"
+              unit="Detection"
+              gradient={["#4CAF50", "#45A049"]}
+            />
+            <InfoCard
+              icon="flash"
+              label="Instant"
+              value="Real-time"
+              unit="Results"
+              gradient={["#FF9800", "#F57C00"]}
+            />
+          </View>
+          <View style={styles.cardRow}>
+            <InfoCard
+              icon="time"
+              label="History"
+              value="Track"
+              unit="Progress"
+              gradient={["#2196F3", "#1976D2"]}
+            />
+            <InfoCard
+              icon="medical"
+              label="Expert"
+              value="Pro"
+              unit="Guidance"
+              gradient={["#9C27B0", "#7B1FA2"]}
+            />
+          </View>
+        </View>
+
+        {/* How it Works */}
+        <GlassCard animated={true}>
+          <View style={styles.bannerContent}>
             <Text style={[styles.cardTitle, { color: colors.text }]}>
               How It Will Work
             </Text>
@@ -171,10 +246,10 @@ export default function SkinScanScreen() {
                 </Text>
               </View>
             </View>
-          </InfoCard>
-        </View>
-      </ScrollView>
-    </>
+          </View>
+        </GlassCard>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -235,6 +310,14 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: 16,
+  },
+  featuresSection: {
+    gap: 16,
+  },
+  cardRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
   },
   sectionTitle: {
     fontSize: 20,

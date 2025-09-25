@@ -25,7 +25,7 @@ interface SkinScanResult {
 
 export default function SkinScanResultScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const {
     imageUri,
     results,

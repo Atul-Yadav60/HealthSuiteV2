@@ -11,13 +11,13 @@ import {
 import { GlassCard } from "../../components/ui/GlassCard";
 import { GradientButton } from "../../components/ui/GradientButton";
 import { MODULES } from "../../constants/AppConfig";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 export default function ModuleScreen() {
   const { moduleId } = useLocalSearchParams();
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
 
   const module = MODULES[moduleId as keyof typeof MODULES];
 

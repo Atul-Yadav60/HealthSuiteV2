@@ -17,7 +17,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useColorScheme } from "../../hooks/useColorScheme";
-import Colors, { gradients } from "../../constants/Colors";
+import DefaultColors, { gradients, Colors } from "../../constants/Colors";
 import { QuickActionButton } from "../../components/ui/QuickActionButton";
 
 const { width } = Dimensions.get("window");
@@ -56,7 +56,7 @@ const QUICK_QUESTIONS = [
 
 export default function AssistantScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);

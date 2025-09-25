@@ -14,7 +14,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { QuickActionButton } from "../../components/ui/QuickActionButton";
 import { MOCK_DATA } from "../../constants/AppConfig";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useAuth } from "../../hooks/useAuth";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { supabase } from "../../lib/supabase";
@@ -44,7 +44,7 @@ const PROFILE_ACTIONS = [
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const { session } = useAuth();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);

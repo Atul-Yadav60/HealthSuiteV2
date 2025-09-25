@@ -159,3 +159,17 @@ export const animationColors = {
     ] as [string, string, string],
   },
 };
+
+// --- Direct Access Colors (for backward compatibility) ---
+export const Colors = {
+  primary: '#6366F1',         // Brand blue-violet
+  secondary: '#8B5CF6',       // Accent purple
+  accent: '#EC4899',          // Hot pink accent
+  success: '#10B981',         // Emerald green
+  warning: '#F59E0B',         // Amber
+  error: '#EF4444',           // Red
+  info: '#3B82F6',            // Blue
+  surface: '#F9FAFB',         // Card surface
+  background: '#F3F6FC',      // Glassy, modern surface
+  text: '#181C2F',            // Deep blue-gray, high contrast
+};

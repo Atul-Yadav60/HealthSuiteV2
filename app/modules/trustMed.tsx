@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientButton } from "@/components/ui/GradientButton";
-import Colors from "@/constants/Colors";
+import DefaultColors, { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { MODULES } from "@/constants/AppConfig";
 
@@ -31,7 +31,7 @@ const FeatureCard = ({ icon, title, description, onPress, colors }: any) => (
 
 export default function TrustMedScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const moduleInfo = MODULES.trustMed;
 
   return (

@@ -26,6 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBLE } from "@/contexts/BLEContext";
 import { useLocation } from "@/hooks/useLocation";
 import { usePedometer } from "@/hooks/usePedometer";
+import { useWeatherInfo } from "@/hooks/useWeather";
 import { fetchEnvironmentalData, EnvironmentalData } from "@/services/api";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
@@ -35,7 +36,7 @@ import { WarningScroller } from "../../components/ui/WarningScroller";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { QuickActionButton } from "../../components/ui/QuickActionButton";
 import { MOCK_DATA, MODULES, QUICK_ACTIONS } from "../../constants/AppConfig";
-import Colors, { gradients, moduleColors } from "../../constants/Colors";
+import DefaultColors, { gradients, moduleColors, Colors } from "../../constants/Colors";
 
 const { width } = Dimensions.get("window");
 
@@ -55,7 +56,7 @@ const MOCK_ENV_DATA: EnvironmentalData = {
 
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
 
   // --- Filtered Quick Actions ---
   const VISIBLE_QUICK_ACTIONS = QUICK_ACTIONS.filter((action) =>
@@ -68,8 +69,15 @@ export default function HomeScreen() {
   const { location, loading: locationLoading } = useLocation();
   const { pastStepCount } = usePedometer();
 
-  const [envData, setEnvData] = useState<EnvironmentalData | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
+  // New weather service integration with 8-minute auto-refresh
+  const {
+    weatherData,
+    loading: weatherLoading,
+    error: weatherError,
+    refresh: refreshWeather,
+    isDataStale,
+  } = useWeatherInfo(true); // Auto-start 8-minute refresh
+
   const [refreshing, setRefreshing] = useState(false);
 
   // --- Animation & UI State ---
@@ -97,34 +105,33 @@ export default function HomeScreen() {
     return shuffledTips.slice(0, 6);
   }, []);
 
-  // --- Data Fetching Logic ---
-  const loadApiData = useCallback(async () => {
-    if (session && location) {
-      try {
-        setDataLoading(true);
-        const data = await fetchEnvironmentalData(location);
-        setEnvData(data);
-      } catch (err) {
-        setEnvData(MOCK_ENV_DATA);
-      } finally {
-        setDataLoading(false);
-      }
-    } else {
-      setEnvData(MOCK_ENV_DATA);
-      setDataLoading(false);
-    }
-  }, [session, location]);
+  // Convert weather data to legacy format for backward compatibility
+  const envData = useMemo(() => {
+    if (!weatherData) return MOCK_ENV_DATA;
 
-  useEffect(() => {
-    if (!authLoading && !locationLoading) {
-      loadApiData();
-    }
-  }, [authLoading, locationLoading, loadApiData]);
+    return {
+      aqi: weatherData.airQuality.aqi,
+      temp: weatherData.weather.temperature,
+      uv: weatherData.weather.uvIndex,
+      weather: weatherData.weather.weatherMain.toLowerCase(),
+      rain: weatherData.weather.rain,
+    };
+  }, [weatherData]);
 
-  const onRefresh = useCallback(() => {
+  // Combined loading state
+  const dataLoading = authLoading || locationLoading || weatherLoading;
+
+  // Refresh handler that triggers weather refresh
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    loadApiData().then(() => setRefreshing(false));
-  }, [loadApiData]);
+    try {
+      await refreshWeather();
+    } catch (error) {
+      console.error("Refresh error:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshWeather]);
 
   useEffect(() => {
     Animated.parallel([
@@ -300,7 +307,7 @@ export default function HomeScreen() {
           },
         ]}
       >
-        {dataLoading || locationLoading ? (
+        {dataLoading ? (
           <ActivityIndicator
             size="large"
             color={colors.primary}
@@ -318,18 +325,78 @@ export default function HomeScreen() {
               />
               <InfoCard
                 icon="thermometer-outline"
-                label="Temp & AQI"
-                value={envData ? `${envData.temp}°c / ${envData.aqi}` : "--"}
+                label="Temperature"
+                value={
+                  weatherData
+                    ? `${weatherData.weather.temperature}°C`
+                    : envData
+                    ? `${envData.temp}°C`
+                    : "--"
+                }
+                unit={
+                  weatherData ? `Feels ${weatherData.weather.feelsLike}°C` : ""
+                }
                 gradient={["#FFA500", "#FF8C00"]}
               />
             </View>
             <View style={styles.cardRow}>
               <InfoCard
+                icon="cloudy-outline"
+                label="Air Quality"
+                value={
+                  weatherData
+                    ? `AQI ${weatherData.airQuality.aqi}`
+                    : envData
+                    ? `AQI ${envData.aqi}`
+                    : "--"
+                }
+                unit={
+                  weatherData
+                    ? weatherData.airQuality.aqi <= 2
+                      ? "Good"
+                      : weatherData.airQuality.aqi === 3
+                      ? "Moderate"
+                      : weatherData.airQuality.aqi >= 4
+                      ? "Poor"
+                      : "Unknown"
+                    : ""
+                }
+                gradient={
+                  weatherData
+                    ? weatherData.airQuality.aqi <= 2
+                      ? ["#00E400", "#4CAF50"]
+                      : weatherData.airQuality.aqi === 3
+                      ? ["#FF7E00", "#FF9800"]
+                      : ["#FF0000", "#F44336"]
+                    : ["#999999", "#757575"]
+                }
+              />
+              <InfoCard
                 icon="sunny-outline"
                 label="UV & Weather"
-                value={envData ? `${envData.uv} / ${envData.weather}` : "N/A"}
+                value={
+                  weatherData
+                    ? `UV ${weatherData.weather.uvIndex}`
+                    : envData
+                    ? `UV ${envData.uv}`
+                    : "--"
+                }
+                unit={
+                  weatherData
+                    ? weatherData.weather.weatherDescription
+                        .split(" ")
+                        .map(
+                          (word) => word.charAt(0).toUpperCase() + word.slice(1)
+                        )
+                        .join(" ")
+                    : envData
+                    ? envData.weather
+                    : ""
+                }
                 gradient={["#FFD700", "#FFC300"]}
               />
+            </View>
+            <View style={styles.cardRow}>
               <InfoCard
                 icon="walk-outline"
                 label="Steps Today"
@@ -337,7 +404,50 @@ export default function HomeScreen() {
                 unit="steps"
                 gradient={["#57C5FF", "#2E9AFE"]}
               />
+              <InfoCard
+                icon="water-outline"
+                label="Humidity"
+                value={weatherData ? `${weatherData.weather.humidity}%` : "--"}
+                unit={weatherData && weatherData.weather.rain ? "🌧️ Rain" : ""}
+                gradient={["#2196F3", "#1976D2"]}
+              />
             </View>
+            {/* Weather update status indicator */}
+            {weatherData && (
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginTop: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 4,
+                  backgroundColor: isDataStale ? "#FF9800" : "#4CAF50",
+                  borderRadius: 12,
+                  alignSelf: "center",
+                }}
+              >
+                <Ionicons
+                  name={
+                    isDataStale ? "warning-outline" : "checkmark-circle-outline"
+                  }
+                  size={12}
+                  color="#fff"
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={{
+                    color: "#fff",
+                    fontSize: 10,
+                    fontWeight: "500",
+                  }}
+                >
+                  {isDataStale
+                    ? "Updating..."
+                    : "Real-time data • Auto-refresh: 8min"}
+                </Text>
+              </View>
+            )}
           </>
         )}
       </Animated.View>

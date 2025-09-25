@@ -14,12 +14,12 @@ Notifications.setNotificationHandler({
 
 // Enhanced medication reminder with multiple notification strategy
 export async function scheduleMedicationReminder(
-  medicine_schedule: { name: string; dosage: string },
+  medication_schedule: { name: string; dosage: string },
   scheduledTime: Date
 ): Promise<string[] | null> {
   console.log('=== Scheduling Medication Reminder ===');
-  console.log('medicine_schedule:', medicine_schedule);
-  console.log('scheduledTime', medication);
+  console.log('medication_schedule:', medication_schedule);
+  console.log('scheduledTime:', scheduledTime);
   console.log('Scheduled time:', scheduledTime.toString());
   console.log('Current time:', new Date().toString());
   
@@ -29,7 +29,7 @@ export async function scheduleMedicationReminder(
   
   // Check if the scheduled time has already passed (with 10-minute buffer)
   if (scheduledTimestamp <= nowTimestamp + (10 * 60 * 1000)) {
-    console.log(`Medication "${medication.name}" scheduled time is too close or has passed`);
+    console.log(`Medication "${medication_schedule.name}" scheduled time is too close or has passed`);
     
     // Schedule for immediate notification if within 10 minutes
     if (scheduledTimestamp > nowTimestamp) {
@@ -40,11 +40,11 @@ export async function scheduleMedicationReminder(
         const identifier = await Notifications.scheduleNotificationAsync({
           content: {
             title: "💊 Medication Due Soon!",
-            body: `${medication.name}${medication.dosage ? ` (${medication.dosage})` : ''} is due in ${timeUntilDue} minutes!`,
+            body: `${medication_schedule.name}${medication_schedule.dosage ? ` (${medication_schedule.dosage})` : ''} is due in ${timeUntilDue} minutes!`,
             sound: 'default',
             data: {
-              medicationName: medication.name,
-              dosage: medication.dosage,
+              medicationName: medication_schedule.name,
+              dosage: medication_schedule.dosage,
               scheduledTime: scheduledTime.toISOString(),
               type: 'medication_immediate'
             },
@@ -88,11 +88,11 @@ export async function scheduleMedicationReminder(
       const earlyId = await Notifications.scheduleNotificationAsync({
         content: {
           title: "💊 Medication Reminder",
-          body: `Time for your ${medication.name}${medication.dosage ? ` (${medication.dosage})` : ''} in 10 minutes.`,
+          body: `Time for your ${medication_schedule.name}${medication_schedule.dosage ? ` (${medication_schedule.dosage})` : ''} in 10 minutes.`,
           sound: 'default',
           data: {
-            medicationName: medication.name,
-            dosage: medication.dosage,
+            medicationName: medication_schedule.name,
+            dosage: medication_schedule.dosage,
             scheduledTime: scheduledTime.toISOString(),
             type: 'medication_early'
           },
@@ -109,11 +109,11 @@ export async function scheduleMedicationReminder(
     const exactId = await Notifications.scheduleNotificationAsync({
       content: {
         title: "💊 Take Your Medication Now!",
-        body: `Time to take your ${medication.name}${medication.dosage ? ` (${medication.dosage})` : ''}`,
+        body: `Time to take your ${medication_schedule.name}${medication_schedule.dosage ? ` (${medication_schedule.dosage})` : ''}`,
         sound: 'default',
         data: {
-          medicationName: medication.name,
-          dosage: medication.dosage,
+          medicationName: medication_schedule.name,
+          dosage: medication_schedule.dosage,
           scheduledTime: scheduledTime.toISOString(),
           type: 'medication_exact'
         },
@@ -130,11 +130,11 @@ export async function scheduleMedicationReminder(
     const deletionId = await Notifications.scheduleNotificationAsync({
       content: {
         title: "📋 Medication Schedule Updated",
-        body: `${medication.name} has been removed from your active medications.`,
+        body: `${medication_schedule.name} has been removed from your active medications.`,
         sound: 'default',
         data: {
-          medicationName: medication.name,
-          dosage: medication.dosage,
+          medicationName: medication_schedule.name,
+          dosage: medication_schedule.dosage,
           scheduledTime: scheduledTime.toISOString(),
           type: 'medication_cleanup'
         },

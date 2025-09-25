@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { InfoCard } from "../../components/ui/InfoCard";
 import { QuickActionButton } from "../../components/ui/QuickActionButton";
-import Colors, { gradients } from "../../constants/Colors";
+import DefaultColors, { gradients, Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 const { width } = Dimensions.get("window");
@@ -48,37 +48,45 @@ const HEALTH_ACTIONS = [
   },
 ];
 
-// Health categories - simplified
+// Health categories - updated for better health management
 const HEALTH_CATEGORIES = [
+  {
+    id: "history",
+    title: "Symptom History",
+    subtitle: "View your logged symptoms & trends",
+    icon: "analytics-outline",
+    count: "Track progress",
+    color: "#8B5CF6",
+  },
+  {
+    id: "allergies",
+    title: "Allergies",
+    subtitle: "Manage known allergies & reactions",
+    icon: "warning-outline",
+    count: "Manage list",
+    color: "#F59E0B",
+  },
+  {
+    id: "conditions",
+    title: "Conditions",
+    subtitle: "Track ongoing health conditions",
+    icon: "medical-outline",
+    count: "Track status",
+    color: "#EF4444",
+  },
   {
     id: "records",
     title: "Health Records",
     subtitle: "Medical history & documents",
     icon: "folder-outline",
     count: "5 files",
-    color: "#8B5CF6",
-  },
-  {
-    id: "allergies",
-    title: "Allergies",
-    subtitle: "Known allergies & reactions",
-    icon: "warning-outline",
-    count: "3 items",
-    color: "#F59E0B",
-  },
-  {
-    id: "conditions",
-    title: "Conditions",
-    subtitle: "Ongoing health conditions",
-    icon: "medical-outline",
-    count: "2 active",
-    color: "#EF4444",
+    color: "#06B6D4",
   },
 ];
 
 export default function HealthScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = React.useCallback(() => {
@@ -89,11 +97,23 @@ export default function HealthScreen() {
   }, []);
 
   const handleQuickAction = (actionId: string) => {
-    router.push("/health/coming-soon");
+    if (actionId === "symptoms") {
+      router.push("/health/logSymptoms");
+    } else {
+      router.push("/health/coming-soon");
+    }
   };
 
   const handleCategoryPress = (categoryId: string) => {
-    router.push("/health/coming-soon");
+    if (categoryId === "history") {
+      router.push("/health/symptomHistory");
+    } else if (categoryId === "allergies") {
+      router.push("/health/allergies");
+    } else if (categoryId === "conditions") {
+      router.push("/health/conditions");
+    } else {
+      router.push("/health/coming-soon");
+    }
   };
 
   return (

@@ -1,440 +1,5 @@
-// import { Ionicons } from "@expo/vector-icons";
-// import { router } from "expo-router";
-// import React, { useState } from "react";
-// import {
-//   View,
-//   Text,
-//   StyleSheet,
-//   TouchableOpacity,
-//   TextInput,
-//   Alert,
-//   Platform,
-// } from "react-native";
-// import DateTimePicker, {
-//   DateTimePickerEvent,
-// } from "@react-native-community/datetimepicker";
-
-// import { GradientButton } from "@/components/ui/GradientButton";
-// import Colors from "@/constants/Colors";
-// import { useColorScheme } from "@/hooks/useColorScheme";
-// import { supabase } from "@/lib/supabase";
-// import { scheduleMedicationReminder } from "@/services/NotificationService";
-
-// export default function AddMedicationScreen() {
-//   const colorScheme = useColorScheme();
-//   const colors = Colors[colorScheme ?? "dark"];
-
-//   const [name, setName] = useState("");
-//   const [dosage, setDosage] = useState("");
-//   const [schedule, setSchedule] = useState<Date[]>([
-//     // Initialize with a future time (1 hour from now)
-//     new Date(Date.now() + 60 * 60 * 1000),
-//   ]);
-//   const [loading, setLoading] = useState(false);
-
-//   const [pickerState, setPickerState] = useState<{
-//     show: boolean;
-//     mode: "date" | "time";
-//     index: number;
-//   }>({ show: false, mode: "date", index: 0 });
-
-//   const handleSaveMedication = async () => {
-//     // Replace with your actual test user ID
-//     const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
-
-//     if (!testUserID || testUserID === "YOUR_TEST_USER_ID_HERE") {
-//       Alert.alert(
-//         "Configuration Error",
-//         "Please paste your Test User ID into the code"
-//       );
-//       return;
-//     }
-
-//     // Validation
-//     if (!name.trim()) {
-//       Alert.alert("Missing Information", "Please enter the medication name.");
-//       return;
-//     }
-
-//     if (schedule.length === 0) {
-//       Alert.alert(
-//         "Missing Information",
-//         "Please add at least one reminder time."
-//       );
-//       return;
-//     }
-
-//     // Check for past times with a 1-minute buffer
-//     const now = new Date(Date.now() + 60000); // 1 minute from now
-//     const pastTimes = schedule.filter((date) => date <= now);
-
-//     if (pastTimes.length > 0) {
-//       Alert.alert(
-//         "Invalid Time",
-//         "Please ensure all reminder times are set at least 1 minute in the future."
-//       );
-//       return;
-//     }
-
-//     setLoading(true);
-//     try {
-//       // Format schedule data
-//       const scheduleISOStrings = schedule.map((date) => date.toISOString());
-
-//       console.log("Saving medication:", {
-//         user_id: testUserID,
-//         name: name.trim(),
-//         dosage: dosage.trim() || null,
-//         schedule: { type: "specific", times: scheduleISOStrings },
-//       });
-
-//       // Insert into database
-//       const { data, error } = await supabase
-//         .from("medications")
-//         .insert({
-//           user_id: testUserID,
-//           name: name.trim(),
-//           dosage: dosage.trim() || null,
-//           schedule: { type: "specific", times: scheduleISOStrings },
-//         })
-//         .select();
-
-//       if (error) {
-//         console.error("Database error:", error);
-//         throw error;
-//       }
-
-//       console.log("Medication saved successfully:", data);
-
-//       // Schedule notifications
-//       try {
-//         for (const date of schedule) {
-//           await scheduleMedicationReminder(
-//             {
-//               name: name.trim(),
-//               dosage: dosage.trim() || "as prescribed",
-//             },
-//             date
-//           );
-//         }
-//         console.log("All notifications scheduled successfully");
-//       } catch (notificationError) {
-//         console.warn("Notification scheduling failed:", notificationError);
-//         // Don't fail the entire operation if notifications fail
-//       }
-
-//       Alert.alert("Success", "Medication added successfully!", [
-//         { text: "OK", onPress: () => router.back() },
-//       ]);
-//     } catch (error: any) {
-//       console.error("Error saving medication:", error);
-//       Alert.alert(
-//         "Error",
-//         `Failed to save medication: ${error.message || "Unknown error"}`
-//       );
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const onPickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-//     // Handle the picker result
-//     if (Platform.OS === "android") {
-//       setPickerState({ ...pickerState, show: false });
-//     }
-
-//     if (event.type === "set" && selectedDate) {
-//       const newSchedule = [...schedule];
-
-//       if (pickerState.mode === "date") {
-//         // Update only the date part, keep the time
-//         const existingTime = newSchedule[pickerState.index];
-//         const newDate = new Date(selectedDate);
-//         newDate.setHours(existingTime.getHours(), existingTime.getMinutes());
-//         newSchedule[pickerState.index] = newDate;
-//       } else {
-//         // Update only the time part, keep the date
-//         const existingDate = newSchedule[pickerState.index];
-//         const newTime = new Date(selectedDate);
-//         const updatedDateTime = new Date(existingDate);
-//         updatedDateTime.setHours(newTime.getHours(), newTime.getMinutes());
-//         newSchedule[pickerState.index] = updatedDateTime;
-//       }
-
-//       setSchedule(newSchedule);
-//     }
-
-//     // For iOS, keep the picker open unless cancelled
-//     if (Platform.OS === "ios" && event.type === "dismissed") {
-//       setPickerState({ ...pickerState, show: false });
-//     }
-//   };
-
-//   const showPicker = (index: number, mode: "date" | "time") => {
-//     setPickerState({ show: true, mode, index });
-//   };
-
-//   const addScheduleItem = () => {
-//     // Add a new time 1 hour from the last item, or 1 hour from now
-//     const lastTime = schedule[schedule.length - 1];
-//     const newTime = new Date(lastTime.getTime() + 60 * 60 * 1000); // 1 hour later
-//     setSchedule([...schedule, newTime]);
-//   };
-
-//   const removeScheduleItem = (indexToRemove: number) => {
-//     if (schedule.length > 1) {
-//       setSchedule(schedule.filter((_, index) => index !== indexToRemove));
-//     } else {
-//       Alert.alert("Cannot Remove", "You must have at least one reminder time.");
-//     }
-//   };
-
-//   const formatDate = (date: Date) => {
-//     return date.toLocaleDateString("en-US", {
-//       weekday: "short",
-//       month: "short",
-//       day: "numeric",
-//       year: "numeric",
-//     });
-//   };
-
-//   const formatTime = (date: Date) => {
-//     return date.toLocaleTimeString("en-US", {
-//       hour: "2-digit",
-//       minute: "2-digit",
-//       hour12: true,
-//     });
-//   };
-
-//   return (
-//     <View style={[styles.container, { backgroundColor: colors.background }]}>
-//       <View style={styles.header}>
-//         <Text style={[styles.title, { color: colors.text }]}>
-//           Add Medication
-//         </Text>
-//         <TouchableOpacity
-//           onPress={() => router.back()}
-//           style={styles.closeButton}
-//         >
-//           <Ionicons
-//             name="close-circle"
-//             size={30}
-//             color={colors.onSurfaceVariant}
-//           />
-//         </TouchableOpacity>
-//       </View>
-
-//       <View style={styles.form}>
-//         <Text style={[styles.label, { color: colors.text }]}>
-//           Medication Name *
-//         </Text>
-//         <TextInput
-//           style={[
-//             styles.input,
-//             {
-//               color: colors.text,
-//               borderColor: colors.outline,
-//               backgroundColor: colors.surface,
-//             },
-//           ]}
-//           placeholder="e.g., Vitamin D, Metformin"
-//           placeholderTextColor={colors.onSurfaceVariant}
-//           value={name}
-//           onChangeText={setName}
-//           autoCapitalize="words"
-//           returnKeyType="next"
-//         />
-
-//         <Text style={[styles.label, { color: colors.text }]}>
-//           Dosage (Optional)
-//         </Text>
-//         <TextInput
-//           style={[
-//             styles.input,
-//             {
-//               color: colors.text,
-//               borderColor: colors.outline,
-//               backgroundColor: colors.surface,
-//             },
-//           ]}
-//           placeholder="e.g., 500mg, 1 tablet"
-//           placeholderTextColor={colors.onSurfaceVariant}
-//           value={dosage}
-//           onChangeText={setDosage}
-//           returnKeyType="done"
-//         />
-
-//         <Text style={[styles.label, { color: colors.text }]}>
-//           Reminder Times *
-//         </Text>
-
-//         {schedule.map((date, index) => (
-//           <View key={index} style={styles.timeRow}>
-//             <View style={styles.timeControls}>
-//               <TouchableOpacity
-//                 onPress={() => showPicker(index, "date")}
-//                 style={[styles.dateButton, { backgroundColor: colors.surface }]}
-//               >
-//                 <Ionicons
-//                   name="calendar-outline"
-//                   size={20}
-//                   color={colors.primary}
-//                 />
-//                 <Text style={[styles.timeText, { color: colors.text }]}>
-//                   {formatDate(date)}
-//                 </Text>
-//               </TouchableOpacity>
-
-//               <TouchableOpacity
-//                 onPress={() => showPicker(index, "time")}
-//                 style={[styles.timeButton, { backgroundColor: colors.surface }]}
-//               >
-//                 <Ionicons
-//                   name="alarm-outline"
-//                   size={20}
-//                   color={colors.primary}
-//                 />
-//                 <Text style={[styles.timeText, { color: colors.text }]}>
-//                   {formatTime(date)}
-//                 </Text>
-//               </TouchableOpacity>
-//             </View>
-
-//             {schedule.length > 1 && (
-//               <TouchableOpacity
-//                 onPress={() => removeScheduleItem(index)}
-//                 style={styles.removeButton}
-//               >
-//                 <Ionicons name="trash-outline" size={20} color={colors.error} />
-//               </TouchableOpacity>
-//             )}
-//           </View>
-//         ))}
-
-//         <TouchableOpacity
-//           style={[styles.addTimeButton, { borderColor: colors.outline }]}
-//           onPress={addScheduleItem}
-//         >
-//           <Ionicons
-//             name="add-circle-outline"
-//             size={20}
-//             color={colors.primary}
-//           />
-//           <Text style={[styles.addTimeText, { color: colors.primary }]}>
-//             Add another reminder
-//           </Text>
-//         </TouchableOpacity>
-//       </View>
-
-//       {pickerState.show && (
-//         <DateTimePicker
-//           value={schedule[pickerState.index]}
-//           mode={pickerState.mode}
-//           is24Hour={false}
-//           display={Platform.OS === "ios" ? "spinner" : "default"}
-//           onChange={onPickerChange}
-//           minimumDate={new Date()}
-//         />
-//       )}
-
-//       <View style={styles.footer}>
-//         <GradientButton
-//           title={loading ? "Saving..." : "Save Medication"}
-//           onPress={handleSaveMedication}
-//           loading={loading}
-//           disabled={loading || !name.trim()}
-//         />
-//       </View>
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: { flex: 1 },
-//   header: {
-//     flexDirection: "row",
-//     justifyContent: "space-between",
-//     alignItems: "center",
-//     paddingTop: Platform.OS === "ios" ? 60 : 40,
-//     paddingHorizontal: 20,
-//     paddingBottom: 16,
-//   },
-//   title: { fontSize: 28, fontWeight: "bold" },
-//   closeButton: { padding: 4 },
-//   form: { flex: 1, padding: 24 },
-//   label: {
-//     fontSize: 16,
-//     fontWeight: "500",
-//     marginBottom: 8,
-//     marginTop: 8,
-//   },
-//   input: {
-//     height: 50,
-//     borderWidth: 1,
-//     borderRadius: 12,
-//     paddingHorizontal: 16,
-//     marginBottom: 16,
-//     fontSize: 16,
-//   },
-//   timeRow: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "space-between",
-//     paddingVertical: 8,
-//     marginBottom: 12,
-//   },
-//   timeControls: {
-//     flexDirection: "row",
-//     flex: 1,
-//     gap: 12,
-//   },
-//   dateButton: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     flex: 1,
-//     padding: 12,
-//     borderRadius: 8,
-//     gap: 8,
-//   },
-//   timeButton: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     flex: 1,
-//     padding: 12,
-//     borderRadius: 8,
-//     gap: 8,
-//   },
-//   timeText: {
-//     fontSize: 14,
-//     fontWeight: "500",
-//   },
-//   removeButton: {
-//     padding: 8,
-//     marginLeft: 8,
-//   },
-//   addTimeButton: {
-//     flexDirection: "row",
-//     alignItems: "center",
-//     justifyContent: "center",
-//     padding: 16,
-//     borderRadius: 12,
-//     borderWidth: 1,
-//     borderStyle: "dashed",
-//     marginTop: 16,
-//     gap: 8,
-//   },
-//   addTimeText: {
-//     fontSize: 16,
-//     fontWeight: "600",
-//   },
-//   footer: {
-//     padding: 24,
-//     paddingBottom: Platform.OS === "ios" ? 40 : 24,
-//   },
-// });
-
-
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -446,144 +11,199 @@ import {
   Alert,
   Platform,
   ScrollView,
+  StatusBar,
+  Modal,
 } from "react-native";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientButton } from "@/components/ui/GradientButton";
-import Colors from "@/constants/Colors";
+import DefaultColors, { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
+import { MedicationService } from "@/services/MedicationService";
 import { scheduleMedicationReminder } from "@/services/NotificationService";
+
+// Enhanced medication form fields
+const FREQUENCY_OPTIONS = [
+  "Once daily",
+  "Twice daily",
+  "Three times daily",
+  "Four times daily",
+  "Every 4 hours",
+  "Every 6 hours",
+  "Every 8 hours",
+  "Every 12 hours",
+  "As needed",
+  "Weekly",
+  "Every other day",
+];
+
+const MEAL_TIMING_OPTIONS = [
+  { value: "anytime", label: "Anytime" },
+  { value: "before", label: "Before meals" },
+  { value: "with", label: "With meals" },
+  { value: "after", label: "After meals" },
+];
+
+const COMMON_SIDE_EFFECTS = [
+  "Nausea",
+  "Drowsiness",
+  "Dizziness",
+  "Headache",
+  "Upset stomach",
+  "Fatigue",
+  "Dry mouth",
+  "Insomnia",
+  "Constipation",
+  "Diarrhea",
+  "Rash",
+  "Weight gain",
+  "Weight loss",
+  "Blurred vision",
+  "Mood changes",
+];
 
 export default function AddMedicationScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
+  const { user } = useAuth();
 
-  const [name, setName] = useState("");
+  // Basic medication info
+  const [medicationName, setMedicationName] = useState("");
   const [dosage, setDosage] = useState("");
-  const [schedule, setSchedule] = useState<Date[]>([
-    new Date(Date.now() + 60 * 60 * 1000),
-  ]);
-  const [loading, setLoading] = useState(false);
+  const [frequency, setFrequency] = useState("Once daily");
+  const [mealTiming, setMealTiming] = useState<
+    "before" | "with" | "after" | "anytime"
+  >("anytime");
 
-  const [pickerState, setPickerState] = useState<{
-    show: boolean;
-    mode: "date" | "time";
-    index: number;
-  }>({ show: false, mode: "date", index: 0 });
+  // Additional details
+  const [instructions, setInstructions] = useState("");
+  const [prescribingDoctor, setPrescribingDoctor] = useState("");
+  const [refillReminder, setRefillReminder] = useState(false);
+  const [selectedSideEffects, setSelectedSideEffects] = useState<string[]>([]);
+  const [customSideEffect, setCustomSideEffect] = useState("");
+
+  // Dates
+  const [startDate, setStartDate] = useState<Date | null>(new Date());
+  const [endDate, setEndDate] = useState<Date | null>(null);
+
+  // Loading and modal states
+  const [loading, setLoading] = useState(false);
+  const [showFrequencyModal, setShowFrequencyModal] = useState(false);
+  const [showMealTimingModal, setShowMealTimingModal] = useState(false);
+  const [showSideEffectsModal, setShowSideEffectsModal] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   const handleSaveMedication = async () => {
-    const testUserID = "511e52f8-0977-43e0-a7a4-b8cdb1c49eba";
-    if (!testUserID || testUserID === "YOUR_TEST_USER_ID_HERE") {
-      Alert.alert(
-        "Configuration Error",
-        "Please paste your Test User ID into the code"
-      );
+    if (!user?.id) {
+      Alert.alert("Authentication Error", "Please log in to add medications.");
       return;
     }
-    if (!name.trim()) {
+
+    if (!medicationName.trim()) {
       Alert.alert("Missing Information", "Please enter the medication name.");
       return;
     }
-    if (schedule.length === 0) {
-      Alert.alert(
-        "Missing Information",
-        "Please add at least one reminder time."
-      );
+
+    if (!dosage.trim()) {
+      Alert.alert("Missing Information", "Please enter the dosage.");
       return;
     }
-    const now = new Date(Date.now() + 60000);
-    const pastTimes = schedule.filter((date) => date <= now);
-    if (pastTimes.length > 0) {
-      Alert.alert(
-        "Invalid Time",
-        "Please ensure all reminder times are set at least 1 minute in the future."
-      );
-      return;
-    }
+
     setLoading(true);
     try {
-      const scheduleISOStrings = schedule.map((date) => date.toISOString());
-      const { data, error } = await supabase
-        .from("medications")
-        .insert({
-          user_id: testUserID,
-          name: name.trim(),
-          dosage: dosage.trim() || null,
-          schedule: { type: "specific", times: scheduleISOStrings },
-        })
-        .select();
-      if (error) throw error;
-      try {
-        for (const date of schedule) {
-          await scheduleMedicationReminder(
+      const medicationSchedule =
+        await MedicationService.createMedicationSchedule(user.id, {
+          medication_name: medicationName.trim(),
+          dosage: dosage.trim(),
+          frequency,
+          meal_timing: mealTiming,
+          instructions: instructions.trim() || undefined,
+          prescribing_doctor: prescribingDoctor.trim() || undefined,
+          refill_reminder: refillReminder,
+          side_effects:
+            selectedSideEffects.length > 0 ? selectedSideEffects : undefined,
+          start_date: startDate?.toISOString().split("T")[0],
+          end_date: endDate?.toISOString().split("T")[0],
+        });
+
+      if (medicationSchedule) {
+        Alert.alert(
+          "Success! 💊",
+          `${medicationName} has been added to your medication schedule.`,
+          [
             {
-              name: name.trim(),
-              dosage: dosage.trim() || "as prescribed",
+              text: "OK",
+              onPress: () => router.back(),
             },
-            date
-          );
-        }
-      } catch {}
-      Alert.alert("Success", "Medication added successfully!", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+          ]
+        );
+
+        // Reset form
+        setMedicationName("");
+        setDosage("");
+        setFrequency("Once daily");
+        setMealTiming("anytime");
+        setInstructions("");
+        setPrescribingDoctor("");
+        setRefillReminder(false);
+        setSelectedSideEffects([]);
+        setStartDate(new Date());
+        setEndDate(null);
+      } else {
+        Alert.alert("Error", "Failed to save medication. Please try again.");
+      }
     } catch (error: any) {
-      Alert.alert(
-        "Error",
-        `Failed to save medication: ${error.message || "Unknown error"}`
-      );
+      console.error("Error saving medication:", error);
+      Alert.alert("Error", "Failed to save medication: " + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const onPickerChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (Platform.OS === "android") {
-      setPickerState({ ...pickerState, show: false });
-    }
-    if (event.type === "set" && selectedDate) {
-      const newSchedule = [...schedule];
-      if (pickerState.mode === "date") {
-        const existingTime = newSchedule[pickerState.index];
-        const newDate = new Date(selectedDate);
-        newDate.setHours(existingTime.getHours(), existingTime.getMinutes());
-        newSchedule[pickerState.index] = newDate;
-      } else {
-        const existingDate = newSchedule[pickerState.index];
-        const newTime = new Date(selectedDate);
-        const updatedDateTime = new Date(existingDate);
-        updatedDateTime.setHours(newTime.getHours(), newTime.getMinutes());
-        newSchedule[pickerState.index] = updatedDateTime;
-      }
-      setSchedule(newSchedule);
-    }
-    if (Platform.OS === "ios" && event.type === "dismissed") {
-      setPickerState({ ...pickerState, show: false });
+  const handleSideEffectToggle = (sideEffect: string) => {
+    setSelectedSideEffects((prev) =>
+      prev.includes(sideEffect)
+        ? prev.filter((effect) => effect !== sideEffect)
+        : [...prev, sideEffect]
+    );
+  };
+
+  const handleAddCustomSideEffect = () => {
+    if (
+      customSideEffect.trim() &&
+      !selectedSideEffects.includes(customSideEffect.trim())
+    ) {
+      setSelectedSideEffects((prev) => [...prev, customSideEffect.trim()]);
+      setCustomSideEffect("");
     }
   };
 
-  const showPicker = (index: number, mode: "date" | "time") => {
-    setPickerState({ show: true, mode, index });
-  };
-
-  const addScheduleItem = () => {
-    const lastTime = schedule[schedule.length - 1];
-    const newTime = new Date(lastTime.getTime() + 60 * 60 * 1000);
-    setSchedule([...schedule, newTime]);
-  };
-
-  const removeScheduleItem = (indexToRemove: number) => {
-    if (schedule.length > 1) {
-      setSchedule(schedule.filter((_, index) => index !== indexToRemove));
-    } else {
-      Alert.alert("Cannot Remove", "You must have at least one reminder time.");
+  const handleStartDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) => {
+    setShowStartDatePicker(false);
+    if (selectedDate) {
+      setStartDate(selectedDate);
     }
   };
 
-  const formatDate = (date: Date) => {
+  const handleEndDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date
+  ) => {
+    setShowEndDatePicker(false);
+    if (selectedDate) {
+      setEndDate(selectedDate);
+    }
+  };
+
+  const formatDate = (date: Date | null): string => {
+    if (!date) return "Not set";
     return date.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
@@ -592,271 +212,888 @@ export default function AddMedicationScreen() {
     });
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <GlassCard style={styles.headerCard}>
+    <>
+      <StatusBar
+        barStyle={colorScheme === "dark" ? "light-content" : "dark-content"}
+      />
+      <LinearGradient colors={["#2066c1ff", "#1a5bb8"]} style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Add Medication
-          </Text>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Add Medication 💊</Text>
+            <Text style={styles.headerSubtitle}>
+              Set up your medication schedule
+            </Text>
+          </View>
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.closeButton}
           >
             <Ionicons
               name="close-circle"
-              size={30}
-              color={colors.onSurfaceVariant}
+              size={28}
+              color="rgba(255,255,255,0.9)"
             />
           </TouchableOpacity>
         </View>
-        <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-          Schedule reminders and stay consistent with your meds
-        </Text>
-      </GlassCard>
+      </LinearGradient>
 
-      <ScrollView
-        style={styles.form}
-        contentContainerStyle={{ paddingBottom: 40 }}
-      >
-        <GlassCard style={styles.formCard}>
-          <Text style={[styles.label, { color: colors.text }]}>
-            Medication Name *
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                color: colors.text,
-                borderColor: colors.outline,
-                backgroundColor: colors.surface,
-              },
-            ]}
-            placeholder="e.g., Vitamin D, Metformin"
-            placeholderTextColor={colors.onSurfaceVariant}
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
-
-          <Text style={[styles.label, { color: colors.text }]}>
-            Dosage (Optional)
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                color: colors.text,
-                borderColor: colors.outline,
-                backgroundColor: colors.surface,
-              },
-            ]}
-            placeholder="e.g., 500mg, 1 tablet"
-            placeholderTextColor={colors.onSurfaceVariant}
-            value={dosage}
-            onChangeText={setDosage}
-            returnKeyType="done"
-          />
-
-          <Text style={[styles.label, { color: colors.text }]}>
-            Reminder Times *
-          </Text>
-          {schedule.map((date, index) => (
-            <View key={index} style={styles.timeRow}>
-              <View style={styles.timeControls}>
-                <TouchableOpacity
-                  onPress={() => showPicker(index, "date")}
-                  style={[
-                    styles.dateButton,
-                    { backgroundColor: colors.surface },
-                  ]}
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <Text style={[styles.timeText, { color: colors.text }]}>
-                    {formatDate(date)}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => showPicker(index, "time")}
-                  style={[
-                    styles.timeButton,
-                    { backgroundColor: colors.surface },
-                  ]}
-                >
-                  <Ionicons
-                    name="alarm-outline"
-                    size={20}
-                    color={colors.primary}
-                  />
-                  <Text style={[styles.timeText, { color: colors.text }]}>
-                    {formatTime(date)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              {schedule.length > 1 && (
-                <TouchableOpacity
-                  onPress={() => removeScheduleItem(index)}
-                  style={styles.removeButton}
-                >
-                  <Ionicons
-                    name="trash-outline"
-                    size={20}
-                    color={colors.error}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
-
-          <TouchableOpacity
-            style={[styles.addTimeButton, { borderColor: colors.outline }]}
-            onPress={addScheduleItem}
-          >
-            <Ionicons
-              name="add-circle-outline"
-              size={20}
-              color={colors.primary}
-            />
-            <Text style={[styles.addTimeText, { color: colors.primary }]}>
-              Add another reminder
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView
+          style={styles.form}
+          contentContainerStyle={{ paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
+          {/* Basic Information */}
+          <GlassCard style={styles.formCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Basic Information
             </Text>
-          </TouchableOpacity>
-        </GlassCard>
-      </ScrollView>
 
-      {pickerState.show && (
+            <Text style={[styles.label, { color: colors.text }]}>
+              Medication Name *
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  color: colors.text,
+                  borderColor: colors.outline,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+              placeholder="e.g., Metformin, Lisinopril"
+              placeholderTextColor={colors.onSurfaceVariant}
+              value={medicationName}
+              onChangeText={setMedicationName}
+              autoCapitalize="words"
+              returnKeyType="next"
+              autoCorrect={false}
+            />
+
+            <Text style={[styles.label, { color: colors.text }]}>Dosage *</Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  color: colors.text,
+                  borderColor: colors.outline,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+              placeholder="e.g., 500mg, 2 tablets, 10ml"
+              placeholderTextColor={colors.onSurfaceVariant}
+              value={dosage}
+              onChangeText={setDosage}
+              returnKeyType="next"
+              autoCorrect={false}
+            />
+
+            <Text style={[styles.label, { color: colors.text }]}>
+              Frequency *
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.selectButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.outline,
+                },
+              ]}
+              onPress={() => setShowFrequencyModal(true)}
+            >
+              <Text style={[styles.selectButtonText, { color: colors.text }]}>
+                {frequency}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={colors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
+
+            <Text style={[styles.label, { color: colors.text }]}>
+              Meal Timing
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.selectButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.outline,
+                },
+              ]}
+              onPress={() => setShowMealTimingModal(true)}
+            >
+              <Text style={[styles.selectButtonText, { color: colors.text }]}>
+                {MEAL_TIMING_OPTIONS.find(
+                  (option) => option.value === mealTiming
+                )?.label || "Anytime"}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={20}
+                color={colors.onSurfaceVariant}
+              />
+            </TouchableOpacity>
+          </GlassCard>
+
+          {/* Duration */}
+          <GlassCard style={styles.formCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Duration
+            </Text>
+
+            <Text style={[styles.label, { color: colors.text }]}>
+              Start Date
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.selectButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.outline,
+                },
+              ]}
+              onPress={() => setShowStartDatePicker(true)}
+            >
+              <Ionicons name="calendar" size={20} color={colors.primary} />
+              <Text style={[styles.selectButtonText, { color: colors.text }]}>
+                {formatDate(startDate)}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={[styles.label, { color: colors.text }]}>
+              End Date (Optional)
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.selectButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.outline,
+                },
+              ]}
+              onPress={() => setShowEndDatePicker(true)}
+            >
+              <Ionicons name="calendar" size={20} color={colors.primary} />
+              <Text style={[styles.selectButtonText, { color: colors.text }]}>
+                {formatDate(endDate)}
+              </Text>
+            </TouchableOpacity>
+            {endDate && (
+              <TouchableOpacity
+                style={styles.clearDateButton}
+                onPress={() => setEndDate(null)}
+              >
+                <Text style={[styles.clearDateText, { color: colors.primary }]}>
+                  Clear end date
+                </Text>
+              </TouchableOpacity>
+            )}
+          </GlassCard>
+
+          {/* Additional Details */}
+          <GlassCard style={styles.formCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Additional Details
+            </Text>
+
+            <Text style={[styles.label, { color: colors.text }]}>
+              Prescribing Doctor
+            </Text>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  color: colors.text,
+                  borderColor: colors.outline,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+              placeholder="e.g., Dr. Smith"
+              placeholderTextColor={colors.onSurfaceVariant}
+              value={prescribingDoctor}
+              onChangeText={setPrescribingDoctor}
+              autoCapitalize="words"
+              returnKeyType="next"
+            />
+
+            <Text style={[styles.label, { color: colors.text }]}>
+              Special Instructions
+            </Text>
+            <TextInput
+              style={[
+                styles.textArea,
+                {
+                  color: colors.text,
+                  borderColor: colors.outline,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+              placeholder="e.g., Take with food, avoid alcohol"
+              placeholderTextColor={colors.onSurfaceVariant}
+              value={instructions}
+              onChangeText={setInstructions}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              returnKeyType="done"
+            />
+
+            <TouchableOpacity
+              style={styles.refillReminderRow}
+              onPress={() => setRefillReminder(!refillReminder)}
+            >
+              <View style={styles.refillReminderContent}>
+                <Ionicons
+                  name="notifications"
+                  size={20}
+                  color={
+                    refillReminder ? colors.primary : colors.onSurfaceVariant
+                  }
+                />
+                <View style={styles.refillReminderText}>
+                  <Text
+                    style={[styles.refillReminderTitle, { color: colors.text }]}
+                  >
+                    Refill Reminders
+                  </Text>
+                  <Text
+                    style={[
+                      styles.refillReminderSubtitle,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Get notified when it's time to refill
+                  </Text>
+                </View>
+              </View>
+              <View
+                style={[
+                  styles.toggle,
+                  {
+                    backgroundColor: refillReminder
+                      ? colors.primary
+                      : colors.surfaceVariant,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.toggleThumb,
+                    {
+                      backgroundColor: "white",
+                      transform: [{ translateX: refillReminder ? 20 : 2 }],
+                    },
+                  ]}
+                />
+              </View>
+            </TouchableOpacity>
+
+            <Text style={[styles.label, { color: colors.text }]}>
+              Known Side Effects
+            </Text>
+            {selectedSideEffects.length > 0 && (
+              <View style={styles.selectedSideEffectsContainer}>
+                <Text style={[styles.selectedLabel, { color: colors.text }]}>
+                  Selected ({selectedSideEffects.length}):
+                </Text>
+                <View style={styles.selectedSideEffects}>
+                  {selectedSideEffects.map((effect, index) => (
+                    <View
+                      key={index}
+                      style={[
+                        styles.sideEffectChip,
+                        { backgroundColor: colors.primary + "20" },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.sideEffectChipText,
+                          { color: colors.primary },
+                        ]}
+                      >
+                        {effect}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => handleSideEffectToggle(effect)}
+                      >
+                        <Ionicons
+                          name="close-circle"
+                          size={16}
+                          color={colors.primary}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+            <TouchableOpacity
+              style={[
+                styles.selectButton,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.outline,
+                },
+              ]}
+              onPress={() => setShowSideEffectsModal(true)}
+            >
+              <Ionicons name="medical" size={20} color={colors.primary} />
+              <Text style={[styles.selectButtonText, { color: colors.text }]}>
+                Select Known Side Effects
+              </Text>
+            </TouchableOpacity>
+          </GlassCard>
+        </ScrollView>
+
+        {/* Fixed Footer */}
+        <View style={styles.footer}>
+          <GradientButton
+            title={loading ? "Saving..." : "Save Medication"}
+            onPress={handleSaveMedication}
+            loading={loading}
+            disabled={loading || !medicationName.trim() || !dosage.trim()}
+          />
+        </View>
+      </View>
+
+      {/* Frequency Modal */}
+      <Modal
+        visible={showFrequencyModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowFrequencyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Select Frequency
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowFrequencyModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollView}>
+              {FREQUENCY_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={[
+                    styles.modalOption,
+                    {
+                      backgroundColor:
+                        frequency === option
+                          ? colors.primary + "20"
+                          : "transparent",
+                    },
+                  ]}
+                  onPress={() => {
+                    setFrequency(option);
+                    setShowFrequencyModal(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      {
+                        color:
+                          frequency === option ? colors.primary : colors.text,
+                      },
+                    ]}
+                  >
+                    {option}
+                  </Text>
+                  {frequency === option && (
+                    <Ionicons
+                      name="checkmark"
+                      size={20}
+                      color={colors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Meal Timing Modal */}
+      <Modal
+        visible={showMealTimingModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowMealTimingModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Select Meal Timing
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowMealTimingModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalScrollView}>
+              {MEAL_TIMING_OPTIONS.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.modalOption,
+                    {
+                      backgroundColor:
+                        mealTiming === option.value
+                          ? colors.primary + "20"
+                          : "transparent",
+                    },
+                  ]}
+                  onPress={() => {
+                    setMealTiming(option.value as any);
+                    setShowMealTimingModal(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.modalOptionText,
+                      {
+                        color:
+                          mealTiming === option.value
+                            ? colors.primary
+                            : colors.text,
+                      },
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  {mealTiming === option.value && (
+                    <Ionicons
+                      name="checkmark"
+                      size={20}
+                      color={colors.primary}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Side Effects Modal */}
+      <Modal
+        visible={showSideEffectsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSideEffectsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Select Side Effects
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowSideEffectsModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScrollView}>
+              <View style={styles.sideEffectsGrid}>
+                {COMMON_SIDE_EFFECTS.map((effect) => (
+                  <TouchableOpacity
+                    key={effect}
+                    style={[
+                      styles.sideEffectOption,
+                      {
+                        backgroundColor: selectedSideEffects.includes(effect)
+                          ? colors.primary + "20"
+                          : colors.surfaceVariant,
+                        borderColor: selectedSideEffects.includes(effect)
+                          ? colors.primary
+                          : "transparent",
+                      },
+                    ]}
+                    onPress={() => handleSideEffectToggle(effect)}
+                  >
+                    <Text
+                      style={[
+                        styles.sideEffectOptionText,
+                        {
+                          color: selectedSideEffects.includes(effect)
+                            ? colors.primary
+                            : colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      {effect}
+                    </Text>
+                    {selectedSideEffects.includes(effect) && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={16}
+                        color={colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.customSideEffectContainer}>
+                <Text
+                  style={[styles.customSideEffectLabel, { color: colors.text }]}
+                >
+                  Add Custom Side Effect
+                </Text>
+                <View style={styles.customSideEffectInputContainer}>
+                  <TextInput
+                    style={[
+                      styles.customSideEffectInput,
+                      {
+                        backgroundColor: colors.surfaceVariant,
+                        color: colors.text,
+                        borderColor: colors.outline,
+                      },
+                    ]}
+                    placeholder="Enter side effect..."
+                    placeholderTextColor={colors.onSurfaceVariant}
+                    value={customSideEffect}
+                    onChangeText={setCustomSideEffect}
+                    onSubmitEditing={handleAddCustomSideEffect}
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.addSideEffectButton,
+                      { backgroundColor: colors.primary },
+                    ]}
+                    onPress={handleAddCustomSideEffect}
+                    disabled={!customSideEffect.trim()}
+                  >
+                    <Ionicons name="add" size={20} color="white" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[
+                styles.modalDoneButton,
+                { backgroundColor: colors.primary },
+              ]}
+              onPress={() => setShowSideEffectsModal(false)}
+            >
+              <Text style={styles.modalDoneButtonText}>
+                Done ({selectedSideEffects.length} selected)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Pickers */}
+      {showStartDatePicker && (
         <DateTimePicker
-          value={schedule[pickerState.index]}
-          mode={pickerState.mode}
-          is24Hour={false}
+          value={startDate || new Date()}
+          mode="date"
           display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={onPickerChange}
+          onChange={handleStartDateChange}
           minimumDate={new Date()}
         />
       )}
 
-      <View style={styles.footer}>
-        <GradientButton
-          title={loading ? "Saving..." : "Save Medication"}
-          onPress={handleSaveMedication}
-          loading={loading}
-          disabled={loading || !name.trim()}
+      {showEndDatePicker && (
+        <DateTimePicker
+          value={endDate || new Date()}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={handleEndDateChange}
+          minimumDate={startDate || new Date()}
         />
-      </View>
-    </View>
+      )}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerCard: {
-    margin: 20,
-    marginBottom: 8,
-    padding: 20,
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingTop: 50,
+    paddingBottom: 24,
+    paddingHorizontal: 18,
   },
   headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  closeButton: { padding: 4 },
-  title: { fontSize: 28, fontWeight: "bold" },
-  subtitle: {
-    fontSize: 15,
-    opacity: 0.8,
-    marginTop: 8,
+  headerText: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "white",
     marginBottom: 4,
   },
-  form: { flex: 1, paddingHorizontal: 20 },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "rgba(255,255,255,0.8)",
+  },
+  closeButton: {
+    padding: 4,
+    marginLeft: 16,
+  },
+  form: {
+    flex: 1,
+    paddingHorizontal: 18,
+    paddingTop: 20,
+  },
   formCard: {
-    padding: 18,
-    borderRadius: 18,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 1,
+    padding: 20,
+    borderRadius: 20,
+    marginBottom: 16,
+    overflow: "hidden",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
     marginBottom: 16,
   },
   label: {
     fontSize: 15,
     fontWeight: "600",
     marginBottom: 8,
-    marginTop: 8,
   },
   input: {
-    height: 50,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    padding: 12,
     fontSize: 16,
+    marginBottom: 16,
+    minHeight: 48,
   },
-  timeRow: {
+  textArea: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+    minHeight: 80,
+  },
+  selectButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 8,
-    marginBottom: 12,
-  },
-  timeControls: {
-    flexDirection: "row",
-    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    minHeight: 48,
     gap: 12,
   },
-  dateButton: {
-    flexDirection: "row",
-    alignItems: "center",
+  selectButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
   },
-  timeButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
+  clearDateButton: {
+    alignSelf: "flex-start",
+    marginTop: -8,
+    marginBottom: 8,
   },
-  timeText: {
+  clearDateText: {
     fontSize: 14,
     fontWeight: "500",
   },
-  removeButton: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  addTimeButton: {
+  refillReminderRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  refillReminderContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    gap: 12,
+  },
+  refillReminderText: {
+    flex: 1,
+  },
+  refillReminderTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  refillReminderSubtitle: {
+    fontSize: 14,
+  },
+  toggle: {
+    width: 44,
+    height: 24,
     borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: "dashed",
-    marginTop: 8,
+    padding: 2,
+    justifyContent: "center",
+  },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+  },
+  selectedSideEffectsContainer: {
+    marginBottom: 16,
+  },
+  selectedLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  selectedSideEffects: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
-  addTimeText: {
-    fontSize: 15,
-    fontWeight: "600",
+  sideEffectChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 6,
+  },
+  sideEffectChipText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
   footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 18,
+    paddingBottom: Platform.OS === "ios" ? 34 : 18,
+    backgroundColor: "transparent",
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "80%",
     padding: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalScrollView: {
+    maxHeight: 400,
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  modalDoneButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 24,
+  },
+  modalDoneButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  // Side Effects Modal
+  sideEffectsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 24,
+  },
+  sideEffectOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 8,
+  },
+  sideEffectOptionText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  customSideEffectContainer: {
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.1)",
+  },
+  customSideEffectLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  customSideEffectInputContainer: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+  },
+  customSideEffectInput: {
+    flex: 1,
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    fontSize: 16,
+  },
+  addSideEffectButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

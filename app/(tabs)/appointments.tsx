@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { QuickActionButton } from "../../components/ui/QuickActionButton";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { ThemedText } from "../../components/ThemedText";
 
@@ -83,7 +83,7 @@ const QUICK_ACTIONS = [
 
 export default function AppointmentsScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = React.useCallback(() => {

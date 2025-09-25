@@ -67,6 +67,8 @@ const styles = StyleSheet.create({
   valueContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
+    flexWrap: "wrap",
+    flex: 1,
   },
   value: {
     fontSize: 22,
@@ -74,10 +76,12 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   unit: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
     color: "rgba(255, 255, 255, 0.8)",
     marginLeft: 4,
     marginBottom: 2,
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
 });

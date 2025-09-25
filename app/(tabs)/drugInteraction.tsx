@@ -14,13 +14,13 @@ import {
 } from "react-native";
 import { InfoCard } from "@/components/ui/InfoCard";
 import { GradientButton } from "@/components/ui/GradientButton";
-import Colors from "@/constants/Colors";
+import DefaultColors, { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { checkDrugInteraction } from "@/services/api";
 
 export default function DrugInteractionScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
 
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);

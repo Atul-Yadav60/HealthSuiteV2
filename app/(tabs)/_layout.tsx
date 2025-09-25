@@ -1,14 +1,14 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import Colors from "@/constants/Colors";
+import DefaultColors, { Colors } from "@/constants/Colors";
 import { TabBarIcon } from "@/components/navigation/TabBarIcon";
 import { BlurView } from "expo-blur";
 import { StyleSheet } from "react-native";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
 
   return (
     <Tabs

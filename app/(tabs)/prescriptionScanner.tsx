@@ -15,13 +15,13 @@ import {
 } from "react-native-vision-camera";
 import { GlassCard } from "../../components/ui/GlassCard";
 import MessageModal from "../../components/ui/MessageModal";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { recognizeTextInImage } from "../../services/OCRAdapter";
 
 export default function PrescriptionScannerScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice("back");
   const camera = useRef<Camera>(null);

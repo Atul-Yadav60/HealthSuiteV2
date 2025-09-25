@@ -95,13 +95,13 @@ export function GradientButton({
       disabled={disabled || loading}
       style={[
         styles.container,
-        getSizeStyles(),
         style,
         disabled || loading ? styles.disabled : undefined,
       ]}
       activeOpacity={0.75}
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading }}
+      pointerEvents="box-only"
     >
       <LinearGradient
         colors={getGradientColors()}
@@ -139,6 +139,8 @@ export function GradientButton({
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
     ...Platform.select({
       web: {
         boxShadow: "0px 2px 6px rgba(0,0,0,0.08)",

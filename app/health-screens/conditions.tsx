@@ -14,7 +14,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { useAuth } from "../../hooks/useAuth";
-import { ConditionsService, ConditionItem } from "../../services/ConditionsService";
+import {
+  ConditionsService,
+  ConditionItem,
+} from "../../services/ConditionsService";
 
 const SEVERITY_COLORS = {
   mild: "#4CAF50",
@@ -84,7 +87,9 @@ export default function ConditionsScreen() {
           onPress: async () => {
             try {
               await ConditionsService.deleteCondition(condition.id);
-              setConditions(prev => prev.filter(c => c.id !== condition.id));
+              setConditions((prev) =>
+                prev.filter((c) => c.id !== condition.id)
+              );
               Alert.alert("Success", "Condition deleted successfully");
             } catch (error) {
               console.error("Error deleting condition:", error);
@@ -99,7 +104,9 @@ export default function ConditionsScreen() {
   const renderConditionItem = ({ item }: { item: ConditionItem }) => (
     <TouchableOpacity
       style={[styles.conditionCard, { backgroundColor: colors.surface }]}
-      onPress={() => router.push(`/health-screens/edit-condition?id=${item.id}`)}
+      onPress={() =>
+        router.push(`/health-screens/edit-condition?id=${item.id}`)
+      }
     >
       <View style={styles.conditionHeader}>
         <View style={styles.conditionInfo}>
@@ -115,13 +122,33 @@ export default function ConditionsScreen() {
             </Text>
           </View>
           <View style={styles.badgesRow}>
-            <View style={[styles.severityBadge, { backgroundColor: SEVERITY_COLORS[item.severity] + "20" }]}>
-              <Text style={[styles.badgeText, { color: SEVERITY_COLORS[item.severity] }]}>
+            <View
+              style={[
+                styles.severityBadge,
+                { backgroundColor: SEVERITY_COLORS[item.severity] + "20" },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: SEVERITY_COLORS[item.severity] },
+                ]}
+              >
                 {item.severity.charAt(0).toUpperCase() + item.severity.slice(1)}
               </Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: STATUS_COLORS[item.status] + "20" }]}>
-              <Text style={[styles.badgeText, { color: STATUS_COLORS[item.status] }]}>
+            <View
+              style={[
+                styles.statusBadge,
+                { backgroundColor: STATUS_COLORS[item.status] + "20" },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  { color: STATUS_COLORS[item.status] },
+                ]}
+              >
                 {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
               </Text>
             </View>
@@ -131,12 +158,19 @@ export default function ConditionsScreen() {
           onPress={() => handleDeleteCondition(item)}
           style={styles.deleteButton}
         >
-          <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
+          <Ionicons
+            name="trash-outline"
+            size={20}
+            color={colors.textSecondary}
+          />
         </TouchableOpacity>
       </View>
 
       {item.description && (
-        <Text style={[styles.conditionDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+        <Text
+          style={[styles.conditionDescription, { color: colors.textSecondary }]}
+          numberOfLines={2}
+        >
           {item.description}
         </Text>
       )}
@@ -148,15 +182,28 @@ export default function ConditionsScreen() {
           </Text>
           <View style={styles.symptomsList}>
             {item.symptoms.slice(0, 3).map((symptom, index) => (
-              <View key={index} style={[styles.symptomChip, { backgroundColor: colors.primary + "20" }]}>
+              <View
+                key={index}
+                style={[
+                  styles.symptomChip,
+                  { backgroundColor: colors.primary + "20" },
+                ]}
+              >
                 <Text style={[styles.symptomText, { color: colors.primary }]}>
                   {symptom}
                 </Text>
               </View>
             ))}
             {item.symptoms.length > 3 && (
-              <View style={[styles.symptomChip, { backgroundColor: colors.textSecondary + "20" }]}>
-                <Text style={[styles.symptomText, { color: colors.textSecondary }]}>
+              <View
+                style={[
+                  styles.symptomChip,
+                  { backgroundColor: colors.textSecondary + "20" },
+                ]}
+              >
+                <Text
+                  style={[styles.symptomText, { color: colors.textSecondary }]}
+                >
                   +{item.symptoms.length - 3} more
                 </Text>
               </View>
@@ -174,7 +221,10 @@ export default function ConditionsScreen() {
             {item.medications.slice(0, 2).map((medication, index) => (
               <View key={index} style={styles.medicationItem}>
                 <Ionicons name="medical" size={14} color={colors.primary} />
-                <Text style={[styles.medicationText, { color: colors.text }]} numberOfLines={1}>
+                <Text
+                  style={[styles.medicationText, { color: colors.text }]}
+                  numberOfLines={1}
+                >
                   {medication}
                 </Text>
               </View>
@@ -192,7 +242,11 @@ export default function ConditionsScreen() {
         <Text style={[styles.dateText, { color: colors.textSecondary }]}>
           Added: {new Date(item.created_at).toLocaleDateString()}
         </Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color={colors.textSecondary}
+        />
       </View>
     </TouchableOpacity>
   );
@@ -204,7 +258,8 @@ export default function ConditionsScreen() {
         No Health Conditions Yet
       </Text>
       <Text style={[styles.emptyMessage, { color: colors.textSecondary }]}>
-        Keep track of your health conditions to better manage your health journey.
+        Keep track of your health conditions to better manage your health
+        journey.
       </Text>
       <TouchableOpacity
         style={[styles.addButton, { backgroundColor: colors.primary }]}
@@ -245,31 +300,45 @@ export default function ConditionsScreen() {
                 <Text style={[styles.statNumber, { color: colors.primary }]}>
                   {conditions.length}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.statLabel, { color: colors.textSecondary }]}
+                >
                   Total Conditions
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, { color: STATUS_COLORS.active }]}>
-                  {conditions.filter(c => c.status === 'active').length}
+                <Text
+                  style={[styles.statNumber, { color: STATUS_COLORS.active }]}
+                >
+                  {conditions.filter((c) => c.status === "active").length}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.statLabel, { color: colors.textSecondary }]}
+                >
                   Active
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, { color: STATUS_COLORS.managed }]}>
-                  {conditions.filter(c => c.status === 'managed').length}
+                <Text
+                  style={[styles.statNumber, { color: STATUS_COLORS.managed }]}
+                >
+                  {conditions.filter((c) => c.status === "managed").length}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.statLabel, { color: colors.textSecondary }]}
+                >
                   Managed
                 </Text>
               </View>
               <View style={styles.statItem}>
-                <Text style={[styles.statNumber, { color: STATUS_COLORS.resolved }]}>
-                  {conditions.filter(c => c.status === 'resolved').length}
+                <Text
+                  style={[styles.statNumber, { color: STATUS_COLORS.resolved }]}
+                >
+                  {conditions.filter((c) => c.status === "resolved").length}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.statLabel, { color: colors.textSecondary }]}
+                >
                   Resolved
                 </Text>
               </View>
@@ -291,7 +360,11 @@ export default function ConditionsScreen() {
             />
           }
           ListEmptyComponent={loading ? null : renderEmptyState}
-          contentContainerStyle={conditions.length === 0 ? styles.emptyContainer : styles.listContainer}
+          contentContainerStyle={
+            conditions.length === 0
+              ? styles.emptyContainer
+              : styles.listContainer
+          }
         />
       </View>
     </LinearGradient>

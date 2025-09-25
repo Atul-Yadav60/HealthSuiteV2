@@ -4,9 +4,10 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  TextInput,
   ScrollView,
+  TextInput,
   Alert,
+  Modal,
   ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -20,87 +21,54 @@ import {
   ConditionItem,
 } from "../../services/ConditionsService";
 
-const CONDITION_CATEGORIES = [
-  { id: "chronic", label: "Chronic", icon: "pulse-outline" },
-  { id: "acute", label: "Acute", icon: "flash-outline" },
-  { id: "mental_health", label: "Mental Health", icon: "heart-outline" },
-  { id: "genetic", label: "Genetic", icon: "code-working-outline" },
-  { id: "autoimmune", label: "Autoimmune", icon: "shield-outline" },
-  { id: "other", label: "Other", icon: "help-circle-outline" },
+const CATEGORIES = [
+  { value: "chronic", label: "Chronic", icon: "pulse" },
+  { value: "acute", label: "Acute", icon: "flash" },
+  { value: "mental_health", label: "Mental Health", icon: "heart" },
+  { value: "genetic", label: "Genetic", icon: "code-working" },
+  { value: "autoimmune", label: "Autoimmune", icon: "shield" },
+  { value: "other", label: "Other", icon: "help-circle" },
 ];
 
-const SEVERITY_LEVELS = [
-  {
-    id: "mild",
-    label: "Mild",
-    color: "#4CAF50",
-    description: "Minor impact on daily activities",
-  },
-  {
-    id: "moderate",
-    label: "Moderate",
-    color: "#FF9800",
-    description: "Some impact on daily activities",
-  },
-  {
-    id: "severe",
-    label: "Severe",
-    color: "#FF5722",
-    description: "Significant impact on daily activities",
-  },
-  {
-    id: "critical",
-    label: "Critical",
-    color: "#D32F2F",
-    description: "Severe impact requiring immediate attention",
-  },
+const SEVERITIES = [
+  { value: "mild", label: "Mild", color: "#4CAF50" },
+  { value: "moderate", label: "Moderate", color: "#FF9800" },
+  { value: "severe", label: "Severe", color: "#FF5722" },
+  { value: "critical", label: "Critical", color: "#D32F2F" },
 ];
 
-const STATUS_OPTIONS = [
-  {
-    id: "active",
-    label: "Active",
-    color: "#FF5722",
-    description: "Currently experiencing symptoms",
-  },
-  {
-    id: "managed",
-    label: "Managed",
-    color: "#FF9800",
-    description: "Under treatment/control",
-  },
-  {
-    id: "resolved",
-    label: "Resolved",
-    color: "#4CAF50",
-    description: "No longer active",
-  },
-  {
-    id: "monitoring",
-    label: "Monitoring",
-    color: "#2196F3",
-    description: "Being monitored by healthcare provider",
-  },
+const STATUSES = [
+  { value: "active", label: "Active", color: "#FF5722" },
+  { value: "managed", label: "Managed", color: "#FF9800" },
+  { value: "resolved", label: "Resolved", color: "#4CAF50" },
+  { value: "monitoring", label: "Monitoring", color: "#2196F3" },
 ];
 
 const COMMON_SYMPTOMS = [
-  "Fatigue",
   "Pain",
-  "Headaches",
+  "Fatigue",
   "Nausea",
+  "Headache",
   "Dizziness",
-  "Shortness of breath",
   "Fever",
-  "Swelling",
-  "Weakness",
+  "Cough",
+  "Shortness of breath",
+  "Chest pain",
   "Joint pain",
-  "Muscle aches",
-  "Insomnia",
+  "Muscle pain",
+  "Sleep problems",
   "Anxiety",
   "Depression",
   "Memory issues",
-  "Difficulty concentrating",
-  "Appetite changes",
+  "Concentration problems",
+  "Skin rash",
+  "Swelling",
+  "Weight loss",
+  "Weight gain",
+  "Loss of appetite",
+  "Digestive issues",
+  "Vision problems",
+  "Hearing problems",
 ];
 
 export default function EditConditionScreen() {
@@ -109,71 +77,59 @@ export default function EditConditionScreen() {
   const { user } = useAuth();
   const { id } = useLocalSearchParams();
 
+  const [condition, setCondition] = useState<ConditionItem | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<ConditionItem["category"]>("other");
+  const [severity, setSeverity] = useState<ConditionItem["severity"]>("mild");
+  const [status, setStatus] = useState<ConditionItem["status"]>("active");
+  const [symptoms, setSymptoms] = useState<string[]>([]);
+  const [medications, setMedications] = useState<string[]>([]);
+  const [treatmentPlan, setTreatmentPlan] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const [showSymptomModal, setShowSymptomModal] = useState(false);
+  const [newSymptom, setNewSymptom] = useState("");
+  const [showMedicationModal, setShowMedicationModal] = useState(false);
+  const [newMedication, setNewMedication] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "chronic" as ConditionItem["category"],
-    severity: "mild" as ConditionItem["severity"],
-    status: "active" as ConditionItem["status"],
-    description: "",
-    symptoms: [] as string[],
-    medications: [] as string[],
-    notes: "",
-    diagnosis_date: "",
-    onset_date: "",
-    last_flare_date: "",
-    treatment_plan: "",
-    doctor_name: "",
-    next_appointment: "",
-  });
-  const [customSymptom, setCustomSymptom] = useState("");
-  const [customMedication, setCustomMedication] = useState("");
 
   useEffect(() => {
-    loadConditionData();
-  }, []);
-
-  const loadConditionData = async () => {
-    if (!user || !id) {
-      Alert.alert("Error", "Invalid condition ID or user not authenticated", [
+    if (id && typeof id === "string") {
+      loadCondition(id);
+    } else {
+      Alert.alert("Error", "Invalid condition ID", [
         { text: "OK", onPress: () => router.back() },
       ]);
-      return;
     }
+  }, [id]);
 
+  const loadCondition = async (conditionId: string) => {
     try {
-      const condition = await ConditionsService.getConditionById(
-        id as string,
-        user.id
+      setLoading(true);
+      const conditionData = await ConditionsService.getConditionById(
+        conditionId
       );
-
-      if (!condition) {
+      if (conditionData) {
+        setCondition(conditionData);
+        setName(conditionData.name);
+        setDescription(conditionData.description || "");
+        setCategory(conditionData.category);
+        setSeverity(conditionData.severity);
+        setStatus(conditionData.status);
+        setSymptoms(conditionData.symptoms || []);
+        setMedications(conditionData.medications || []);
+        setTreatmentPlan(conditionData.treatment_plan || "");
+        setNotes(conditionData.notes || "");
+      } else {
         Alert.alert("Error", "Condition not found", [
           { text: "OK", onPress: () => router.back() },
         ]);
-        return;
       }
-
-      setFormData({
-        name: condition.name,
-        category: condition.category,
-        severity: condition.severity,
-        status: condition.status,
-        description: condition.description || "",
-        symptoms: condition.symptoms || [],
-        medications: condition.medications || [],
-        notes: condition.notes || "",
-        diagnosis_date: condition.diagnosis_date || "",
-        onset_date: condition.onset_date || "",
-        last_flare_date: condition.last_flare_date || "",
-        treatment_plan: condition.treatment_plan || "",
-        doctor_name: condition.doctor_name || "",
-        next_appointment: condition.next_appointment || "",
-      });
     } catch (error) {
       console.error("Error loading condition:", error);
-      Alert.alert("Error", "Failed to load condition data", [
+      Alert.alert("Error", "Failed to load condition", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } finally {
@@ -181,100 +137,72 @@ export default function EditConditionScreen() {
     }
   };
 
-  const toggleSymptom = (symptom: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      symptoms: prev.symptoms.includes(symptom)
-        ? prev.symptoms.filter((s) => s !== symptom)
-        : [...prev.symptoms, symptom],
-    }));
+  const handleAddSymptom = (symptom: string) => {
+    if (symptom.trim() && !symptoms.includes(symptom.trim())) {
+      setSymptoms([...symptoms, symptom.trim()]);
+    }
+    setNewSymptom("");
   };
 
-  const addCustomSymptom = () => {
-    if (
-      customSymptom.trim() &&
-      !formData.symptoms.includes(customSymptom.trim())
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        symptoms: [...prev.symptoms, customSymptom.trim()],
-      }));
-      setCustomSymptom("");
+  const handleRemoveSymptom = (symptom: string) => {
+    setSymptoms(symptoms.filter((s) => s !== symptom));
+  };
+
+  const handleAddMedication = () => {
+    if (newMedication.trim() && !medications.includes(newMedication.trim())) {
+      setMedications([...medications, newMedication.trim()]);
+      setNewMedication("");
+      setShowMedicationModal(false);
     }
   };
 
-  const removeSymptom = (symptom: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      symptoms: prev.symptoms.filter((s) => s !== symptom),
-    }));
-  };
-
-  const addMedication = () => {
-    if (
-      customMedication.trim() &&
-      !formData.medications.includes(customMedication.trim())
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        medications: [...prev.medications, customMedication.trim()],
-      }));
-      setCustomMedication("");
-    }
-  };
-
-  const removeMedication = (medication: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      medications: prev.medications.filter((m) => m !== medication),
-    }));
+  const handleRemoveMedication = (medication: string) => {
+    setMedications(medications.filter((m) => m !== medication));
   };
 
   const handleSave = async () => {
-    if (!user || !id) {
-      Alert.alert("Error", "User not authenticated or invalid condition ID");
+    if (!name.trim()) {
+      Alert.alert("Error", "Please enter a condition name");
       return;
     }
 
-    if (!formData.name.trim()) {
-      Alert.alert("Error", "Please enter the condition name");
+    if (!condition) {
+      Alert.alert("Error", "No condition data available");
       return;
     }
 
+    setSaving(true);
     try {
-      setSaving(true);
-
-      const conditionData = {
-        ...formData,
-        name: formData.name.trim(),
-        description: formData.description.trim(),
-        notes: formData.notes.trim(),
-        treatment_plan: formData.treatment_plan.trim(),
-        doctor_name: formData.doctor_name.trim(),
+      const updatedData = {
+        name: name.trim(),
+        description: description.trim() || null,
+        category,
+        severity,
+        status,
+        symptoms: symptoms.length > 0 ? symptoms : null,
+        medications: medications.length > 0 ? medications : null,
+        treatment_plan: treatmentPlan.trim() || null,
+        notes: notes.trim() || null,
       };
 
-      await ConditionsService.updateCondition(id as string, conditionData);
-
-      Alert.alert("Success", "Health condition updated successfully", [
+      await ConditionsService.updateCondition(condition.id, updatedData);
+      Alert.alert("Success", "Condition updated successfully", [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error) {
       console.error("Error updating condition:", error);
-      Alert.alert("Error", "Failed to update condition");
+      Alert.alert("Error", "Failed to update condition. Please try again.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!user || !id) {
-      Alert.alert("Error", "User not authenticated or invalid condition ID");
-      return;
-    }
+  const handleDelete = () => {
+    if (!condition) return;
 
     Alert.alert(
       "Delete Condition",
-      "Are you sure you want to delete this health condition? This action cannot be undone.",
+      `Are you sure you want to delete "${condition.name}"? This action cannot be undone.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -282,7 +210,7 @@ export default function EditConditionScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await ConditionsService.deleteCondition(id as string);
+              await ConditionsService.deleteCondition(condition.id);
               Alert.alert("Success", "Condition deleted successfully", [
                 { text: "OK", onPress: () => router.back() },
               ]);
@@ -301,551 +229,460 @@ export default function EditConditionScreen() {
       <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.loadingText}>Loading condition data...</Text>
+          <Text style={styles.loadingText}>Loading condition...</Text>
         </View>
       </LinearGradient>
     );
   }
 
+  if (!condition) {
+    return null;
+  }
+
   return (
     <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </TouchableOpacity>
-          <Text style={styles.title}>Edit Condition</Text>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Edit Condition</Text>
+        <View style={styles.headerActions}>
           <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Ionicons name="trash-outline" size={24} color="#fff" />
+            <Ionicons name="trash-outline" size={20} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? "Saving..." : "Save"}
+            </Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        <View style={styles.content}>
-          {/* Condition Name */}
-          <View style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Basic Information
+          </Text>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
               Condition Name *
             </Text>
             <TextInput
               style={[
-                styles.textInput,
-                { backgroundColor: colors.surface, color: colors.text },
+                styles.input,
+                { backgroundColor: colors.background, color: colors.text },
               ]}
-              value={formData.name}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, name: text }))
-              }
-              placeholder="e.g., Type 2 Diabetes, Hypertension, Anxiety"
+              value={name}
+              onChangeText={setName}
+              placeholder="Enter condition name"
               placeholderTextColor={colors.textSecondary}
             />
           </View>
 
-          {/* Category Selection */}
-          <View style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Category *
-            </Text>
-            <View style={styles.categoryGrid}>
-              {CONDITION_CATEGORIES.map((category) => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.categoryOption,
-                    { backgroundColor: colors.surface },
-                    formData.category === category.id && {
-                      backgroundColor: colors.primary,
-                    },
-                  ]}
-                  onPress={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      category: category.id as ConditionItem["category"],
-                    }))
-                  }
-                >
-                  <Ionicons
-                    name={category.icon as any}
-                    size={24}
-                    color={
-                      formData.category === category.id
-                        ? "#fff"
-                        : colors.primary
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.categoryLabel,
-                      {
-                        color:
-                          formData.category === category.id
-                            ? "#fff"
-                            : colors.text,
-                      },
-                    ]}
-                  >
-                    {category.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Status Selection - More prominent for editing */}
-          <View style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Current Status *
-            </Text>
-            <View style={styles.statusList}>
-              {STATUS_OPTIONS.map((status) => (
-                <TouchableOpacity
-                  key={status.id}
-                  style={[
-                    styles.statusOption,
-                    { backgroundColor: colors.surface },
-                    formData.status === status.id && {
-                      backgroundColor: "rgba(102, 126, 234, 0.1)",
-                      borderColor: colors.primary,
-                      borderWidth: 2,
-                    },
-                  ]}
-                  onPress={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      status: status.id as ConditionItem["status"],
-                    }))
-                  }
-                >
-                  <View style={styles.statusContent}>
-                    <View style={styles.statusHeader}>
-                      <View
-                        style={[
-                          styles.statusIndicator,
-                          { backgroundColor: status.color },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.statusLabel,
-                          { color: colors.text },
-                          formData.status === status.id && {
-                            color: colors.primary,
-                          },
-                        ]}
-                      >
-                        {status.label}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.statusDescription,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {status.description}
-                    </Text>
-                  </View>
-                  {formData.status === status.id && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color={colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Severity Selection */}
-          <View style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Severity Level *
-            </Text>
-            <View style={styles.severityList}>
-              {SEVERITY_LEVELS.map((severity) => (
-                <TouchableOpacity
-                  key={severity.id}
-                  style={[
-                    styles.severityOption,
-                    { backgroundColor: colors.surface },
-                    formData.severity === severity.id && {
-                      backgroundColor: "rgba(102, 126, 234, 0.1)",
-                      borderColor: colors.primary,
-                      borderWidth: 2,
-                    },
-                  ]}
-                  onPress={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      severity: severity.id as ConditionItem["severity"],
-                    }))
-                  }
-                >
-                  <View style={styles.severityContent}>
-                    <View style={styles.severityHeader}>
-                      <View
-                        style={[
-                          styles.severityIndicator,
-                          { backgroundColor: severity.color },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.severityLabel,
-                          { color: colors.text },
-                          formData.severity === severity.id && {
-                            color: colors.primary,
-                          },
-                        ]}
-                      >
-                        {severity.label}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.severityDescription,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {severity.description}
-                    </Text>
-                  </View>
-                  {formData.severity === severity.id && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color={colors.primary}
-                    />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Description */}
-          <View style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
               Description
             </Text>
             <TextInput
               style={[
                 styles.textArea,
-                { backgroundColor: colors.surface, color: colors.text },
+                { backgroundColor: colors.background, color: colors.text },
               ]}
-              value={formData.description}
-              onChangeText={(text) =>
-                setFormData((prev) => ({ ...prev, description: text }))
-              }
-              placeholder="Describe your condition, how it affects you..."
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe your condition..."
               placeholderTextColor={colors.textSecondary}
               multiline
-              numberOfLines={4}
+              numberOfLines={3}
             />
           </View>
+        </View>
 
-          {/* Symptoms */}
-          <View style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Symptoms
-            </Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Classification
+          </Text>
 
-            <View style={styles.symptomsGrid}>
-              {COMMON_SYMPTOMS.map((symptom) => (
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Category</Text>
+            <View style={styles.optionsGrid}>
+              {CATEGORIES.map((cat) => (
                 <TouchableOpacity
-                  key={symptom}
+                  key={cat.value}
                   style={[
-                    styles.symptomChip,
-                    { backgroundColor: colors.surface },
-                    formData.symptoms.includes(symptom) && {
-                      backgroundColor: colors.primary,
+                    styles.optionButton,
+                    category === cat.value && styles.optionButtonActive,
+                    {
+                      backgroundColor:
+                        category === cat.value
+                          ? colors.primary
+                          : colors.background,
                     },
                   ]}
-                  onPress={() => toggleSymptom(symptom)}
+                  onPress={() =>
+                    setCategory(cat.value as ConditionItem["category"])
+                  }
                 >
+                  <Ionicons
+                    name={cat.icon as any}
+                    size={20}
+                    color={
+                      category === cat.value ? "#fff" : colors.textSecondary
+                    }
+                  />
                   <Text
                     style={[
-                      styles.symptomChipText,
-                      { color: colors.text },
-                      formData.symptoms.includes(symptom) && {
-                        color: "#fff",
-                      },
+                      styles.optionText,
+                      { color: category === cat.value ? "#fff" : colors.text },
                     ]}
                   >
-                    {symptom}
+                    {cat.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-
-            <View style={styles.customInputContainer}>
-              <TextInput
-                style={[
-                  styles.customInput,
-                  { backgroundColor: colors.surface, color: colors.text },
-                ]}
-                value={customSymptom}
-                onChangeText={setCustomSymptom}
-                placeholder="Add custom symptom"
-                placeholderTextColor={colors.textSecondary}
-                onSubmitEditing={addCustomSymptom}
-              />
-              <TouchableOpacity
-                style={[styles.addButton, { backgroundColor: colors.primary }]}
-                onPress={addCustomSymptom}
-              >
-                <Ionicons name="add" size={20} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            {formData.symptoms.length > 0 && (
-              <View style={styles.selectedContainer}>
-                <Text style={[styles.selectedLabel, { color: colors.text }]}>
-                  Current Symptoms ({formData.symptoms.length}):
-                </Text>
-                <View style={styles.selectedGrid}>
-                  {formData.symptoms.map((symptom) => (
-                    <View key={symptom} style={styles.selectedChip}>
-                      <Text style={styles.selectedText}>{symptom}</Text>
-                      <TouchableOpacity onPress={() => removeSymptom(symptom)}>
-                        <Ionicons
-                          name="close-circle"
-                          size={18}
-                          color="#FF5722"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
           </View>
 
-          {/* Medications */}
-          <View style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Medications
-            </Text>
-
-            <View style={styles.customInputContainer}>
-              <TextInput
-                style={[
-                  styles.customInput,
-                  { backgroundColor: colors.surface, color: colors.text },
-                ]}
-                value={customMedication}
-                onChangeText={setCustomMedication}
-                placeholder="e.g., Metformin 500mg, Lisinopril 10mg"
-                placeholderTextColor={colors.textSecondary}
-                onSubmitEditing={addMedication}
-              />
-              <TouchableOpacity
-                style={[styles.addButton, { backgroundColor: colors.primary }]}
-                onPress={addMedication}
-              >
-                <Ionicons name="add" size={20} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            {formData.medications.length > 0 && (
-              <View style={styles.selectedContainer}>
-                <Text style={[styles.selectedLabel, { color: colors.text }]}>
-                  Current Medications ({formData.medications.length}):
-                </Text>
-                <View style={styles.medicationsList}>
-                  {formData.medications.map((medication, index) => (
-                    <View key={index} style={styles.medicationItem}>
-                      <Ionicons
-                        name="medical"
-                        size={16}
-                        color={colors.primary}
-                      />
-                      <Text
-                        style={[styles.medicationText, { color: colors.text }]}
-                      >
-                        {medication}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => removeMedication(medication)}
-                      >
-                        <Ionicons
-                          name="close-circle"
-                          size={18}
-                          color="#FF5722"
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* Additional Information */}
-          <View style={styles.formCard}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Additional Information
-            </Text>
-
-            <View style={styles.datesContainer}>
-              <View style={styles.dateField}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                  Diagnosis Date
-                </Text>
-                <TextInput
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Severity</Text>
+            <View style={styles.optionsRow}>
+              {SEVERITIES.map((sev) => (
+                <TouchableOpacity
+                  key={sev.value}
                   style={[
-                    styles.dateInput,
-                    { backgroundColor: colors.surface, color: colors.text },
+                    styles.severityButton,
+                    severity === sev.value && styles.severityButtonActive,
+                    {
+                      backgroundColor:
+                        severity === sev.value ? sev.color : colors.background,
+                      borderColor: sev.color,
+                    },
                   ]}
-                  value={formData.diagnosis_date}
-                  onChangeText={(text) =>
-                    setFormData((prev) => ({ ...prev, diagnosis_date: text }))
+                  onPress={() =>
+                    setSeverity(sev.value as ConditionItem["severity"])
                   }
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textSecondary}
-                />
-              </View>
-
-              <View style={styles.dateField}>
-                <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                  Last Flare-up
-                </Text>
-                <TextInput
-                  style={[
-                    styles.dateInput,
-                    { backgroundColor: colors.surface, color: colors.text },
-                  ]}
-                  value={formData.last_flare_date}
-                  onChangeText={(text) =>
-                    setFormData((prev) => ({ ...prev, last_flare_date: text }))
-                  }
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textSecondary}
-                />
-              </View>
-            </View>
-
-            <View style={styles.optionalField}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Doctor/Specialist Name
-              </Text>
-              <TextInput
-                style={[
-                  styles.textInput,
-                  { backgroundColor: colors.surface, color: colors.text },
-                ]}
-                value={formData.doctor_name}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, doctor_name: text }))
-                }
-                placeholder="Dr. Smith, Cardiologist"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
-
-            <View style={styles.optionalField}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Next Appointment
-              </Text>
-              <TextInput
-                style={[
-                  styles.dateInput,
-                  { backgroundColor: colors.surface, color: colors.text },
-                ]}
-                value={formData.next_appointment}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, next_appointment: text }))
-                }
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor={colors.textSecondary}
-              />
-            </View>
-
-            <View style={styles.optionalField}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Treatment Plan
-              </Text>
-              <TextInput
-                style={[
-                  styles.textArea,
-                  { backgroundColor: colors.surface, color: colors.text },
-                ]}
-                value={formData.treatment_plan}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, treatment_plan: text }))
-                }
-                placeholder="Current treatment approach, goals..."
-                placeholderTextColor={colors.textSecondary}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            <View style={styles.optionalField}>
-              <Text style={[styles.fieldLabel, { color: colors.text }]}>
-                Notes
-              </Text>
-              <TextInput
-                style={[
-                  styles.textArea,
-                  { backgroundColor: colors.surface, color: colors.text },
-                ]}
-                value={formData.notes}
-                onChangeText={(text) =>
-                  setFormData((prev) => ({ ...prev, notes: text }))
-                }
-                placeholder="Any additional notes about this condition..."
-                placeholderTextColor={colors.textSecondary}
-                multiline
-                numberOfLines={3}
-              />
+                >
+                  <Text
+                    style={[
+                      styles.severityText,
+                      { color: severity === sev.value ? "#fff" : sev.color },
+                    ]}
+                  >
+                    {sev.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
-          {/* Action Buttons */}
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity
-              style={[styles.saveButton, { backgroundColor: colors.primary }]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              <Text style={styles.saveButtonText}>
-                {saving ? "Updating..." : "Update Condition"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.deleteConditionButton}
-              onPress={handleDelete}
-            >
-              <Ionicons name="trash-outline" size={20} color="#FF5722" />
-              <Text style={styles.deleteButtonText}>Delete Condition</Text>
-            </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Status</Text>
+            <View style={styles.optionsRow}>
+              {STATUSES.map((stat) => (
+                <TouchableOpacity
+                  key={stat.value}
+                  style={[
+                    styles.statusButton,
+                    status === stat.value && styles.statusButtonActive,
+                    {
+                      backgroundColor:
+                        status === stat.value ? stat.color : colors.background,
+                      borderColor: stat.color,
+                    },
+                  ]}
+                  onPress={() =>
+                    setStatus(stat.value as ConditionItem["status"])
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: status === stat.value ? "#fff" : stat.color },
+                    ]}
+                  >
+                    {stat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
+
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Symptoms
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowSymptomModal(true)}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={styles.addButtonText}>Add Symptom</Text>
+          </TouchableOpacity>
+
+          {symptoms.length > 0 && (
+            <View style={styles.chipContainer}>
+              {symptoms.map((symptom, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: colors.primary + "20" },
+                  ]}
+                >
+                  <Text style={[styles.chipText, { color: colors.primary }]}>
+                    {symptom}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveSymptom(symptom)}
+                  >
+                    <Ionicons name="close" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Medications
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+            onPress={() => setShowMedicationModal(true)}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+            <Text style={styles.addButtonText}>Add Medication</Text>
+          </TouchableOpacity>
+
+          {medications.length > 0 && (
+            <View style={styles.medicationsList}>
+              {medications.map((medication, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.medicationItem,
+                    { backgroundColor: colors.background },
+                  ]}
+                >
+                  <Ionicons name="medical" size={20} color={colors.primary} />
+                  <Text style={[styles.medicationText, { color: colors.text }]}>
+                    {medication}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveMedication(medication)}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={16}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Additional Information
+          </Text>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Treatment Plan
+            </Text>
+            <TextInput
+              style={[
+                styles.textArea,
+                { backgroundColor: colors.background, color: colors.text },
+              ]}
+              value={treatmentPlan}
+              onChangeText={setTreatmentPlan}
+              placeholder="Describe your treatment plan..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
+            <TextInput
+              style={[
+                styles.textArea,
+                { backgroundColor: colors.background, color: colors.text },
+              ]}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Any additional notes..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+        </View>
+
+        <View style={styles.bottomPadding} />
       </ScrollView>
+
+      {/* Symptom Modal */}
+      <Modal visible={showSymptomModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Add Symptom
+              </Text>
+              <TouchableOpacity onPress={() => setShowSymptomModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Common Symptoms
+              </Text>
+              <ScrollView
+                style={styles.symptomGrid}
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.symptomRow}>
+                  {COMMON_SYMPTOMS.map((symptom) => (
+                    <TouchableOpacity
+                      key={symptom}
+                      style={[
+                        styles.symptomOption,
+                        { backgroundColor: colors.background },
+                      ]}
+                      onPress={() => {
+                        handleAddSymptom(symptom);
+                        setShowSymptomModal(false);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.symptomOptionText,
+                          { color: colors.text },
+                        ]}
+                      >
+                        {symptom}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Custom Symptom
+              </Text>
+              <View style={styles.customInputRow}>
+                <TextInput
+                  style={[
+                    styles.modalInput,
+                    { backgroundColor: colors.background, color: colors.text },
+                  ]}
+                  value={newSymptom}
+                  onChangeText={setNewSymptom}
+                  placeholder="Enter custom symptom"
+                  placeholderTextColor={colors.textSecondary}
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.modalAddButton,
+                    { backgroundColor: colors.primary },
+                  ]}
+                  onPress={() => {
+                    handleAddSymptom(newSymptom);
+                    setShowSymptomModal(false);
+                  }}
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Medication Modal */}
+      <Modal visible={showMedicationModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Add Medication
+              </Text>
+              <TouchableOpacity onPress={() => setShowMedicationModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalSection}>
+              <Text style={[styles.label, { color: colors.text }]}>
+                Medication Name
+              </Text>
+              <View style={styles.customInputRow}>
+                <TextInput
+                  style={[
+                    styles.modalInput,
+                    { backgroundColor: colors.background, color: colors.text },
+                  ]}
+                  value={newMedication}
+                  onChangeText={setNewMedication}
+                  placeholder="Enter medication name"
+                  placeholderTextColor={colors.textSecondary}
+                  autoCapitalize="words"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.modalAddButton,
+                    { backgroundColor: colors.primary },
+                  ]}
+                  onPress={handleAddMedication}
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1 
+  container: {
+    flex: 1,
   },
-  scrollView: { 
-    flex: 1 
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  loadingContainer: { 
-    flex: 1, 
-    justifyContent: "center", 
-    alignItems: "center" 
-  },
-  loadingText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    marginTop: 16 
+  loadingText: {
+    color: "#fff",
+    fontSize: 16,
+    marginTop: 12,
   },
   header: {
     flexDirection: "row",
@@ -860,13 +697,30 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "rgba(255, 255, 255, 0.2)",
   },
+  headerActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
   deleteButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: "rgba(255, 87, 34, 0.3)",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontWeight: "600",
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#fff",
     textAlign: "center",
@@ -879,263 +733,210 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     paddingTop: 20,
   },
-  formCard: {
+  section: {
     marginHorizontal: 20,
     marginBottom: 20,
     padding: 20,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  sectionTitle: { 
-    marginBottom: 12, 
-    fontSize: 18, 
-    fontWeight: "600" 
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 16,
   },
-  textInput: {
-    borderRadius: 12,
-    padding: 16,
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  input: {
+    padding: 12,
+    borderRadius: 8,
     fontSize: 16,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",
   },
   textArea: {
-    borderRadius: 12,
-    padding: 16,
+    padding: 12,
+    borderRadius: 8,
     fontSize: 16,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",
-    minHeight: 100,
+    minHeight: 80,
     textAlignVertical: "top",
   },
-  categoryGrid: { 
-    flexDirection: "row", 
-    flexWrap: "wrap", 
-    gap: 12 
-  },
-  categoryOption: {
-    flex: 1,
-    minWidth: "45%",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  categoryLabel: { 
-    marginTop: 8, 
-    fontSize: 14, 
-    fontWeight: "500" 
-  },
-  severityList: { 
-    gap: 12 
-  },
-  severityOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  severityContent: { 
-    flex: 1 
-  },
-  severityHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  severityIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  severityLabel: { 
-    fontSize: 16, 
-    fontWeight: "600" 
-  },
-  severityDescription: { 
-    fontSize: 14, 
-    marginLeft: 24 
-  },
-  statusList: { 
-    gap: 12 
-  },
-  statusOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "transparent",
-  },
-  statusContent: { 
-    flex: 1 
-  },
-  statusHeader: { 
-    flexDirection: "row", 
-    alignItems: "center", 
-    marginBottom: 4 
-  },
-  statusIndicator: { 
-    width: 12, 
-    height: 12, 
-    borderRadius: 6, 
-    marginRight: 12 
-  },
-  statusLabel: { 
-    fontSize: 16, 
-    fontWeight: "600" 
-  },
-  statusDescription: { 
-    fontSize: 14, 
-    marginLeft: 24 
-  },
-  symptomsGrid: {
+  optionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 16,
   },
-  symptomChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(0, 0, 0, 0.1)",
-  },
-  symptomChipText: { 
-    fontSize: 14, 
-    fontWeight: "500" 
-  },
-  customInputContainer: {
+  optionButton: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
-  },
-  customInput: {
-    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",
+    gap: 6,
+    minWidth: 100,
   },
-  addButton: { 
-    padding: 12, 
-    borderRadius: 8 
+  optionButtonActive: {
+    borderColor: "transparent",
   },
-  selectedContainer: { 
-    marginTop: 16 
+  optionText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
-  selectedLabel: { 
-    fontSize: 14, 
-    fontWeight: "600", 
-    marginBottom: 8 
+  optionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
   },
-  selectedGrid: { 
-    flexDirection: "row", 
-    flexWrap: "wrap", 
-    gap: 8 
+  severityButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    flex: 1,
+    minWidth: 80,
   },
-  selectedChip: {
+  severityButtonActive: {
+    borderColor: "transparent",
+  },
+  severityText: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  statusButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 2,
+    flex: 1,
+    minWidth: 80,
+  },
+  statusButtonActive: {
+    borderColor: "transparent",
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  addButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+    marginBottom: 12,
+  },
+  addButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  chipContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  chip: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: "rgba(76, 175, 80, 0.1)",
-    borderWidth: 1,
-    borderColor: "#4CAF50",
+    gap: 6,
   },
-  selectedText: {
-    fontSize: 12,
-    color: "#4CAF50",
-    marginRight: 6,
+  chipText: {
+    fontSize: 14,
     fontWeight: "500",
   },
-  medicationsList: { 
-    gap: 8 
+  medicationsList: {
+    gap: 8,
   },
   medicationItem: {
     flexDirection: "row",
     alignItems: "center",
+    padding: 12,
+    borderRadius: 8,
+    gap: 12,
+  },
+  medicationText: {
+    fontSize: 16,
+    flex: 1,
+  },
+  bottomPadding: {
+    height: 40,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 16,
+    padding: 20,
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+  },
+  modalSection: {
+    marginBottom: 20,
+  },
+  symptomGrid: {
+    maxHeight: 200,
+  },
+  symptomRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  symptomOption: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: "rgba(33, 150, 243, 0.1)",
-    borderWidth: 1,
-    borderColor: "#2196F3",
+    marginBottom: 8,
   },
-  medicationText: { 
-    flex: 1, 
-    fontSize: 14, 
-    marginLeft: 8, 
-    fontWeight: "500" 
+  symptomOptionText: {
+    fontSize: 14,
   },
-  datesContainer: { 
-    flexDirection: "row", 
-    gap: 12, 
-    marginBottom: 16 
+  customInputRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
   },
-  dateField: { 
-    flex: 1 
-  },
-  optionalField: { 
-    marginBottom: 16 
-  },
-  fieldLabel: { 
-    fontSize: 14, 
-    fontWeight: "500", 
-    marginBottom: 8 
-  },
-  dateInput: {
-    borderRadius: 12,
-    padding: 16,
+  modalInput: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
     fontSize: 16,
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",
   },
-  actionsContainer: { 
-    paddingHorizontal: 20, 
-    paddingBottom: 40 
+  modalAddButton: {
+    padding: 12,
+    borderRadius: 8,
   },
-  saveButton: {
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  saveButtonText: { 
-    color: "#fff", 
-    fontSize: 16, 
-    fontWeight: "600" 
-  },
-  deleteConditionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    marginTop: 12,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 87, 34, 0.1)",
-    borderWidth: 1,
-    borderColor: "#FF5722",
-  },
-  deleteButtonText: {
-    color: "#FF5722",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
-  }
-  });
-  
+});

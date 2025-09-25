@@ -1,29 +1,20 @@
-import React, { useState, useEffect } from "react";
-import DefaultColors, { Colors } from "../../constants/Colors";
-import {
-  AllergiesService,
-  Allergy,
-  AllergyItem,
-} from "../../services/AllergiesService";
-import { useAuth } from "../../hooks/useAuth";
-import { useColorScheme } from "../../hooks/useColorScheme";
+import React, { useState } from "react";
 import {
   View,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  TouchableOpacity,
   Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+  Alert,
 } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-
-import { ThemedText } from "../../components/ThemedText";
-import { ThemedView } from "../../components/ThemedView";
-import { GlassCard } from "../../components/ui/GlassCard";
-import GradientButton from "../../components/ui/GradientButton";
-import { TextInput } from "react-native-gesture-handler";
+import DefaultColors, { Colors } from "@/constants/Colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { useAuth } from "@/hooks/useAuth";
+import { AllergiesService, AllergyItem } from "@/services/AllergiesService";
 
 const ALLERGY_CATEGORIES = [
   { id: "food", label: "Food", icon: "restaurant-outline" },
@@ -77,12 +68,10 @@ const COMMON_REACTIONS = [
   "Anaphylaxis",
 ];
 
-export default function EditAllergyScreen() {
+export default function AddAllergyScreen() {
   const colorScheme = useColorScheme();
   const colors = DefaultColors[colorScheme] || Colors;
   const { user } = useAuth();
-  const { id } = useLocalSearchParams();
-  const [allergy, setAllergy] = useState<AllergyItem | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     category: "food" as AllergyItem["category"],
@@ -93,109 +82,7 @@ export default function EditAllergyScreen() {
     last_reaction_date: "",
   });
   const [customReaction, setCustomReaction] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    loadAllergy();
-  }, [user, id]);
-
-  const loadAllergy = async () => {
-    if (!user || !id) return;
-
-    try {
-      setLoading(true);
-      const allergies = await AllergiesService.getUserAllergies(user.id);
-      const foundAllergy = allergies.find((a) => a.id === id);
-
-      if (foundAllergy) {
-        setAllergy(foundAllergy);
-        setFormData({
-          name: foundAllergy.name,
-          category: foundAllergy.category,
-          severity: foundAllergy.severity,
-          reactions: foundAllergy.reactions,
-          notes: foundAllergy.notes || "",
-          first_reaction_date: foundAllergy.first_reaction_date || "",
-          last_reaction_date: foundAllergy.last_reaction_date || "",
-        });
-      } else {
-        Alert.alert("Error", "Allergy not found", [
-          { text: "OK", onPress: () => router.back() },
-        ]);
-      }
-    } catch (error) {
-      console.error("Error loading allergy:", error);
-      Alert.alert("Error", "Failed to load allergy");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!user || !allergy) {
-      Alert.alert("Error", "User not authenticated or allergy not loaded");
-      return;
-    }
-
-    if (!formData.name.trim()) {
-      Alert.alert("Error", "Please enter the allergy name");
-      return;
-    }
-
-    if (formData.reactions.length === 0) {
-      Alert.alert("Error", "Please select at least one reaction");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      const updatedData = {
-        ...formData,
-        name: formData.name.trim(),
-        notes: formData.notes.trim(),
-      };
-
-      await AllergiesService.updateAllergy(user.id, allergy.id, updatedData);
-
-      Alert.alert("Success", "Allergy updated successfully", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
-    } catch (error) {
-      console.error("Error updating allergy:", error);
-      Alert.alert("Error", "Failed to update allergy");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = () => {
-    Alert.alert(
-      "Delete Allergy",
-      "Are you sure you want to delete this allergy? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            if (!user || !allergy) return;
-
-            try {
-              await AllergiesService.deleteAllergy(user.id, allergy.id);
-              Alert.alert("Success", "Allergy deleted successfully", [
-                { text: "OK", onPress: () => router.back() },
-              ]);
-            } catch (error) {
-              console.error("Error deleting allergy:", error);
-              Alert.alert("Error", "Failed to delete allergy");
-            }
-          },
-        },
-      ]
-    );
-  };
 
   const toggleReaction = (reaction: string) => {
     setFormData((prev) => ({
@@ -226,66 +113,93 @@ export default function EditAllergyScreen() {
     }));
   };
 
-  if (loading) {
-    return (
-      <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ThemedText>Loading allergy...</ThemedText>
-        </View>
-      </LinearGradient>
-    );
-  }
+  const handleSave = async () => {
+    if (!user) {
+      Alert.alert("Error", "User not authenticated");
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      Alert.alert("Error", "Please enter the allergy name");
+      return;
+    }
+
+    if (formData.reactions.length === 0) {
+      Alert.alert("Error", "Please select at least one reaction");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const allergyData = {
+        ...formData,
+        name: formData.name.trim(),
+        notes: formData.notes.trim(),
+      };
+
+      await AllergiesService.createAllergy(user.id, allergyData);
+
+      Alert.alert("Success", "Allergy added successfully", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (error) {
+      console.error("Error adding allergy:", error);
+      Alert.alert("Error", "Failed to add allergy");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <LinearGradient colors={["#667eea", "#764ba2"]} style={styles.container}>
       <ScrollView style={styles.scrollView}>
-        <ThemedView style={styles.header}>
+        <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          <ThemedText type="title" style={styles.title}>
-            Edit Allergy
-          </ThemedText>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-            <Ionicons name="trash-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </ThemedView>
+          <Text style={styles.title}>Add New Allergy</Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-        {/* Allergy Name */}
-        <GlassCard style={styles.formCard}>
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+        <View style={styles.content}>
+          {/* Allergy Name */}
+          <View style={styles.formCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Allergy Name *
-            </ThemedText>
+            </Text>
             <TextInput
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                { backgroundColor: colors.surface, color: colors.text },
+              ]}
               value={formData.name}
               onChangeText={(text) =>
                 setFormData((prev) => ({ ...prev, name: text }))
               }
               placeholder="e.g., Peanuts, Penicillin, Pollen"
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
-        </GlassCard>
 
-        {/* Category Selection */}
-        <GlassCard style={styles.formCard}>
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          {/* Category Selection */}
+          <View style={styles.formCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Category *
-            </ThemedText>
+            </Text>
             <View style={styles.categoryGrid}>
               {ALLERGY_CATEGORIES.map((category) => (
                 <TouchableOpacity
                   key={category.id}
                   style={[
                     styles.categoryOption,
-                    formData.category === category.id &&
-                      styles.categoryOptionActive,
+                    { backgroundColor: colors.surface },
+                    formData.category === category.id && {
+                      backgroundColor: colors.primary,
+                    },
                   ]}
                   onPress={() =>
                     setFormData((prev) => ({
@@ -306,8 +220,12 @@ export default function EditAllergyScreen() {
                   <Text
                     style={[
                       styles.categoryLabel,
-                      formData.category === category.id &&
-                        styles.categoryLabelActive,
+                      {
+                        color:
+                          formData.category === category.id
+                            ? "#fff"
+                            : colors.text,
+                      },
                     ]}
                   >
                     {category.label}
@@ -316,22 +234,24 @@ export default function EditAllergyScreen() {
               ))}
             </View>
           </View>
-        </GlassCard>
 
-        {/* Severity Selection */}
-        <GlassCard style={styles.formCard}>
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          {/* Severity Selection */}
+          <View style={styles.formCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Severity Level *
-            </ThemedText>
+            </Text>
             <View style={styles.severityList}>
               {SEVERITY_LEVELS.map((severity) => (
                 <TouchableOpacity
                   key={severity.id}
                   style={[
                     styles.severityOption,
-                    formData.severity === severity.id &&
-                      styles.severityOptionActive,
+                    { backgroundColor: colors.surface },
+                    formData.severity === severity.id && {
+                      backgroundColor: "rgba(102, 126, 234, 0.1)",
+                      borderColor: colors.primary,
+                      borderWidth: 2,
+                    },
                   ]}
                   onPress={() =>
                     setFormData((prev) => ({
@@ -351,8 +271,10 @@ export default function EditAllergyScreen() {
                       <Text
                         style={[
                           styles.severityLabel,
-                          formData.severity === severity.id &&
-                            styles.severityLabelActive,
+                          { color: colors.text },
+                          formData.severity === severity.id && {
+                            color: colors.primary,
+                          },
                         ]}
                       >
                         {severity.label}
@@ -361,8 +283,7 @@ export default function EditAllergyScreen() {
                     <Text
                       style={[
                         styles.severityDescription,
-                        formData.severity === severity.id &&
-                          styles.severityDescriptionActive,
+                        { color: colors.textSecondary },
                       ]}
                     >
                       {severity.description}
@@ -379,17 +300,17 @@ export default function EditAllergyScreen() {
               ))}
             </View>
           </View>
-        </GlassCard>
 
-        {/* Reactions Selection */}
-        <GlassCard style={styles.formCard}>
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          {/* Reactions Selection */}
+          <View style={styles.formCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Common Reactions *
-            </ThemedText>
-            <ThemedText style={styles.sectionSubtitle}>
+            </Text>
+            <Text
+              style={[styles.sectionSubtitle, { color: colors.textSecondary }]}
+            >
               Select all reactions you experience
-            </ThemedText>
+            </Text>
 
             <View style={styles.reactionsGrid}>
               {COMMON_REACTIONS.map((reaction) => (
@@ -397,16 +318,20 @@ export default function EditAllergyScreen() {
                   key={reaction}
                   style={[
                     styles.reactionChip,
-                    formData.reactions.includes(reaction) &&
-                      styles.reactionChipActive,
+                    { backgroundColor: colors.surface },
+                    formData.reactions.includes(reaction) && {
+                      backgroundColor: colors.primary,
+                    },
                   ]}
                   onPress={() => toggleReaction(reaction)}
                 >
                   <Text
                     style={[
                       styles.reactionChipText,
-                      formData.reactions.includes(reaction) &&
-                        styles.reactionChipTextActive,
+                      { color: colors.text },
+                      formData.reactions.includes(reaction) && {
+                        color: "#fff",
+                      },
                     ]}
                   >
                     {reaction}
@@ -418,15 +343,21 @@ export default function EditAllergyScreen() {
             {/* Custom Reaction Input */}
             <View style={styles.customReactionContainer}>
               <TextInput
-                style={styles.customReactionInput}
+                style={[
+                  styles.customReactionInput,
+                  { backgroundColor: colors.surface, color: colors.text },
+                ]}
                 value={customReaction}
                 onChangeText={setCustomReaction}
                 placeholder="Add custom reaction"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 onSubmitEditing={addCustomReaction}
               />
               <TouchableOpacity
-                style={styles.addReactionButton}
+                style={[
+                  styles.addReactionButton,
+                  { backgroundColor: colors.primary },
+                ]}
                 onPress={addCustomReaction}
               >
                 <Ionicons name="add" size={20} color="#fff" />
@@ -436,9 +367,14 @@ export default function EditAllergyScreen() {
             {/* Selected Reactions */}
             {formData.reactions.length > 0 && (
               <View style={styles.selectedReactionsContainer}>
-                <ThemedText style={styles.selectedReactionsLabel}>
+                <Text
+                  style={[
+                    styles.selectedReactionsLabel,
+                    { color: colors.text },
+                  ]}
+                >
                   Selected Reactions ({formData.reactions.length}):
-                </ThemedText>
+                </Text>
                 <View style={styles.selectedReactionsGrid}>
                   {formData.reactions.map((reaction) => (
                     <View key={reaction} style={styles.selectedReactionChip}>
@@ -460,27 +396,28 @@ export default function EditAllergyScreen() {
               </View>
             )}
           </View>
-        </GlassCard>
 
-        {/* Optional Fields */}
-        <GlassCard style={styles.formCard}>
-          <View style={styles.formSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+          {/* Optional Fields */}
+          <View style={styles.formCard}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Additional Information
-            </ThemedText>
+            </Text>
 
             <View style={styles.optionalField}>
-              <ThemedText style={styles.fieldLabel}>
+              <Text style={[styles.fieldLabel, { color: colors.text }]}>
                 Notes (optional)
-              </ThemedText>
+              </Text>
               <TextInput
-                style={styles.textArea}
+                style={[
+                  styles.textArea,
+                  { backgroundColor: colors.surface, color: colors.text },
+                ]}
                 value={formData.notes}
                 onChangeText={(text) =>
                   setFormData((prev) => ({ ...prev, notes: text }))
                 }
                 placeholder="Any additional notes about this allergy..."
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 multiline
                 numberOfLines={3}
               />
@@ -488,11 +425,14 @@ export default function EditAllergyScreen() {
 
             <View style={styles.datesContainer}>
               <View style={styles.dateField}>
-                <ThemedText style={styles.fieldLabel}>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>
                   First Reaction Date
-                </ThemedText>
+                </Text>
                 <TextInput
-                  style={styles.dateInput}
+                  style={[
+                    styles.dateInput,
+                    { backgroundColor: colors.surface, color: colors.text },
+                  ]}
                   value={formData.first_reaction_date}
                   onChangeText={(text) =>
                     setFormData((prev) => ({
@@ -501,16 +441,19 @@ export default function EditAllergyScreen() {
                     }))
                   }
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
 
               <View style={styles.dateField}>
-                <ThemedText style={styles.fieldLabel}>
+                <Text style={[styles.fieldLabel, { color: colors.text }]}>
                   Last Reaction Date
-                </ThemedText>
+                </Text>
                 <TextInput
-                  style={styles.dateInput}
+                  style={[
+                    styles.dateInput,
+                    { backgroundColor: colors.surface, color: colors.text },
+                  ]}
                   value={formData.last_reaction_date}
                   onChangeText={(text) =>
                     setFormData((prev) => ({
@@ -519,28 +462,24 @@ export default function EditAllergyScreen() {
                     }))
                   }
                   placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                 />
               </View>
             </View>
           </View>
-        </GlassCard>
 
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          <GradientButton
-            title={saving ? "Updating..." : "Update Allergy"}
-            onPress={handleSave}
-            disabled={saving}
-            style={styles.saveButton}
-          />
-
-          <TouchableOpacity
-            style={styles.deleteActionButton}
-            onPress={handleDelete}
-          >
-            <Text style={styles.deleteActionText}>Delete This Allergy</Text>
-          </TouchableOpacity>
+          {/* Action Buttons */}
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: colors.primary }]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              <Text style={styles.saveButtonText}>
+                {saving ? "Adding..." : "Add Allergy"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </LinearGradient>
@@ -554,11 +493,6 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -566,7 +500,6 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: "transparent",
   },
   backButton: {
     padding: 8,
@@ -580,18 +513,24 @@ const styles = StyleSheet.create({
     textAlign: "center",
     flex: 1,
   },
-  deleteButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: "rgba(255, 87, 34, 0.3)",
+  content: {
+    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 20,
   },
   formCard: {
     marginHorizontal: 20,
     marginBottom: 20,
     padding: 20,
-  },
-  formSection: {
-    marginBottom: 4,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     marginBottom: 12,
@@ -601,10 +540,8 @@ const styles = StyleSheet.create({
   sectionSubtitle: {
     marginBottom: 16,
     fontSize: 14,
-    opacity: 0.7,
   },
   textInput: {
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -621,23 +558,14 @@ const styles = StyleSheet.create({
     minWidth: "45%",
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
     alignItems: "center",
     borderWidth: 2,
     borderColor: "transparent",
-  },
-  categoryOptionActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   categoryLabel: {
     marginTop: 8,
     fontSize: 14,
     fontWeight: "500",
-    color: colors.primary,
-  },
-  categoryLabelActive: {
-    color: "#fff",
   },
   severityList: {
     gap: 12,
@@ -648,13 +576,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "transparent",
-  },
-  severityOptionActive: {
-    backgroundColor: "rgba(102, 126, 234, 0.1)",
-    borderColor: colors.primary,
   },
   severityContent: {
     flex: 1,
@@ -674,16 +597,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  severityLabelActive: {
-    color: colors.primary,
-  },
   severityDescription: {
     fontSize: 14,
-    opacity: 0.7,
     marginLeft: 24,
-  },
-  severityDescriptionActive: {
-    opacity: 1,
   },
   reactionsGrid: {
     flexDirection: "row",
@@ -695,20 +611,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderWidth: 1,
     borderColor: "rgba(0, 0, 0, 0.1)",
-  },
-  reactionChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
   },
   reactionChipText: {
     fontSize: 14,
     fontWeight: "500",
-  },
-  reactionChipTextActive: {
-    color: "#fff",
   },
   customReactionContainer: {
     flexDirection: "row",
@@ -718,7 +626,6 @@ const styles = StyleSheet.create({
   },
   customReactionInput: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: 8,
     padding: 12,
     fontSize: 14,
@@ -728,7 +635,6 @@ const styles = StyleSheet.create({
   addReactionButton: {
     padding: 12,
     borderRadius: 8,
-    backgroundColor: colors.primary,
   },
   selectedReactionsContainer: {
     marginTop: 16,
@@ -737,7 +643,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
-    opacity: 0.8,
   },
   selectedReactionsGrid: {
     flexDirection: "row",
@@ -767,10 +672,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     marginBottom: 8,
-    opacity: 0.8,
   },
   textArea: {
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -787,7 +690,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateInput: {
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
@@ -799,18 +701,13 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   saveButton: {
-    marginBottom: 16,
-  },
-  deleteActionButton: {
     padding: 16,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 87, 34, 0.1)",
-    borderWidth: 1,
-    borderColor: "#FF5722",
     alignItems: "center",
+    marginTop: 10,
   },
-  deleteActionText: {
-    color: "#FF5722",
+  saveButtonText: {
+    color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },

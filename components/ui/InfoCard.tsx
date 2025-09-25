@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { ThemedText } from "../ThemedText";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/Colors";
+import DefaultColors, { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -22,7 +22,7 @@ export function InfoCard({
   gradient,
 }: InfoCardProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
 
   return (
     <View style={styles.cardContainer}>

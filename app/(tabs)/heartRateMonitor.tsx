@@ -14,13 +14,13 @@ import { Device } from "react-native-ble-plx";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { GradientButton } from "../../components/ui/GradientButton";
 import MessageModal from "../../components/ui/MessageModal";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { bleService } from "../../services/BLEManager";
 
 export default function HeartRateMonitorScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const [hasPermission, setHasPermission] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);

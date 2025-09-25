@@ -20,7 +20,7 @@ import {  tile: {
   View,
   Platform,
 } from "react-native";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 interface TileProps {
@@ -32,7 +32,7 @@ interface TileProps {
 
 export default function Tile({ icon, title, subtitle, onPress }: TileProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme] || Colors;
   return (
     <TouchableOpacity
       style={[styles.tile, { backgroundColor: colors.card }]}

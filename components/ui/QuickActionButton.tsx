@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { QuickAction } from "../../constants/AppConfig";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 type QuickActionButtonProps = {
@@ -24,7 +24,7 @@ export function QuickActionButton({
   style,
 }: QuickActionButtonProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   if (!action) return null;
 
   return (

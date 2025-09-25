@@ -1,6 +1,6 @@
 import React, { ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 export default function SectionHeader({
@@ -11,7 +11,7 @@ export default function SectionHeader({
   action?: ReactNode;
 }) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme] || Colors;
   return (
     <View style={styles.row}>
       <Text style={[styles.title, { color: colors.text }]}>{title}</Text>

@@ -3,7 +3,7 @@ import React from "react";
 import { type IconProps } from "@expo/vector-icons/build/createIconSet";
 import { type ComponentProps } from "react";
 import { useColorScheme } from "@/hooks/useColorScheme";
-import Colors from "@/constants/Colors";
+import DefaultColors, { Colors } from "@/constants/Colors";
 
 /**
  * TabBarIcon with bold and accessible style.
@@ -17,7 +17,7 @@ export function TabBarIcon({
   focused?: boolean;
 }) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme] || Colors;
   const iconColor =
     color ?? (focused ? colors.tabIconSelected : colors.tabIconDefault);
 

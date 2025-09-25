@@ -98,21 +98,21 @@ export default function HealthScreen() {
 
   const handleQuickAction = (actionId: string) => {
     if (actionId === "symptoms") {
-      router.push("/health/logSymptoms");
+      router.push("/health-screens/logSymptoms");
     } else {
-      router.push("/health/coming-soon");
+      router.push("/health-screens/coming-soon");
     }
   };
 
   const handleCategoryPress = (categoryId: string) => {
     if (categoryId === "history") {
-      router.push("/health/symptomHistory");
+      router.push("/health-screens/symptomHistory");
     } else if (categoryId === "allergies") {
-      router.push("/health/allergies");
+      router.push("/health-screens/allergies");
     } else if (categoryId === "conditions") {
-      router.push("/health/conditions");
+      router.push("/health-screens/conditions");
     } else {
-      router.push("/health/coming-soon");
+      router.push("/health-screens/coming-soon");
     }
   };
 

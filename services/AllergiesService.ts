@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 
 export interface AllergyItem {
   id: string;
+  user_id: string;
   name: string;
   category: 'food' | 'medication' | 'environmental' | 'other';
   severity: 'mild' | 'moderate' | 'severe' | 'life-threatening';
@@ -9,124 +10,96 @@ export interface AllergyItem {
   notes?: string;
   first_reaction_date?: string;
   last_reaction_date?: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface UserAllergies {
-  user_id: string;
-  allergies: AllergyItem[];
-  updated_at: string;
+export interface CreateAllergyData {
+  name: string;
+  category: AllergyItem['category'];
+  severity: AllergyItem['severity'];
+  reactions: string[];
+  notes?: string;
+  first_reaction_date?: string;
+  last_reaction_date?: string;
 }
 
 export class AllergiesService {
   /**
-   * Get user's allergies from user_profiles table
+   * Get user's allergies from allergies table
    */
   static async getUserAllergies(userId: string): Promise<AllergyItem[]> {
     try {
       const { data, error } = await supabase
-        .from('user_profiles')
-        .select('allergies')
+        .from('allergies')
+        .select('*')
         .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching allergies:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getUserAllergies:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a specific allergy by ID
+   */
+  static async getAllergyById(userId: string, allergyId: string): Promise<AllergyItem | null> {
+    try {
+      const { data, error } = await supabase
+        .from('allergies')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('id', allergyId)
+        .eq('is_active', true)
         .single();
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // No profile found, return empty array
-          return [];
+          return null; // Not found
         }
+        console.error('Error fetching allergy:', error);
         throw error;
       }
 
-      // If allergies is stored as a simple string array, convert to AllergyItem format
-      if (data?.allergies && Array.isArray(data.allergies)) {
-        if (typeof data.allergies[0] === 'string') {
-          // Convert old format to new format
-          return data.allergies.map((allergy: string, index: number) => ({
-            id: `allergy_${index}_${Date.now()}`,
-            name: allergy,
-            category: 'other' as const,
-            severity: 'mild' as const,
-            reactions: [],
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }));
-        } else {
-          // Already in the new format
-          return data.allergies;
-        }
-      }
-
-      return [];
+      return data;
     } catch (error) {
-      console.error('Error fetching user allergies:', error);
+      console.error('Error in getAllergyById:', error);
       throw error;
     }
   }
 
   /**
-   * Update user's allergies in user_profiles table
+   * Create a new allergy
    */
-  static async updateUserAllergies(userId: string, allergies: AllergyItem[]): Promise<void> {
+  static async createAllergy(userId: string, allergyData: CreateAllergyData): Promise<AllergyItem> {
     try {
-      // First, check if profile exists
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('user_id', userId)
+      const { data, error } = await supabase
+        .from('allergies')
+        .insert({
+          user_id: userId,
+          ...allergyData,
+        })
+        .select()
         .single();
 
-      if (!existingProfile) {
-        // Create profile if it doesn't exist
-        const { error: insertError } = await supabase
-          .from('user_profiles')
-          .insert({
-            user_id: userId,
-            allergies: allergies,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-
-        if (insertError) throw insertError;
-      } else {
-        // Update existing profile
-        const { error: updateError } = await supabase
-          .from('user_profiles')
-          .update({
-            allergies: allergies,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('user_id', userId);
-
-        if (updateError) throw updateError;
+      if (error) {
+        console.error('Error creating allergy:', error);
+        throw error;
       }
+
+      return data;
     } catch (error) {
-      console.error('Error updating user allergies:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Add a new allergy
-   */
-  static async addAllergy(userId: string, allergy: Omit<AllergyItem, 'id' | 'created_at' | 'updated_at'>): Promise<AllergyItem> {
-    try {
-      const existingAllergies = await this.getUserAllergies(userId);
-      
-      const newAllergy: AllergyItem = {
-        ...allergy,
-        id: `allergy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      const updatedAllergies = [...existingAllergies, newAllergy];
-      await this.updateUserAllergies(userId, updatedAllergies);
-
-      return newAllergy;
-    } catch (error) {
-      console.error('Error adding allergy:', error);
+      console.error('Error in createAllergy:', error);
       throw error;
     }
   }
@@ -134,38 +107,45 @@ export class AllergiesService {
   /**
    * Update an existing allergy
    */
-  static async updateAllergy(userId: string, allergyId: string, updates: Partial<Omit<AllergyItem, 'id' | 'created_at'>>): Promise<void> {
+  static async updateAllergy(userId: string, allergyId: string, allergyData: Partial<CreateAllergyData>): Promise<AllergyItem> {
     try {
-      const existingAllergies = await this.getUserAllergies(userId);
-      
-      const updatedAllergies = existingAllergies.map(allergy => 
-        allergy.id === allergyId 
-          ? { 
-              ...allergy, 
-              ...updates, 
-              updated_at: new Date().toISOString() 
-            }
-          : allergy
-      );
+      const { data, error } = await supabase
+        .from('allergies')
+        .update(allergyData)
+        .eq('user_id', userId)
+        .eq('id', allergyId)
+        .select()
+        .single();
 
-      await this.updateUserAllergies(userId, updatedAllergies);
+      if (error) {
+        console.error('Error updating allergy:', error);
+        throw error;
+      }
+
+      return data;
     } catch (error) {
-      console.error('Error updating allergy:', error);
+      console.error('Error in updateAllergy:', error);
       throw error;
     }
   }
 
   /**
-   * Delete an allergy
+   * Delete an allergy (soft delete)
    */
   static async deleteAllergy(userId: string, allergyId: string): Promise<void> {
     try {
-      const existingAllergies = await this.getUserAllergies(userId);
-      
-      const updatedAllergies = existingAllergies.filter(allergy => allergy.id !== allergyId);
-      await this.updateUserAllergies(userId, updatedAllergies);
+      const { error } = await supabase
+        .from('allergies')
+        .update({ is_active: false })
+        .eq('user_id', userId)
+        .eq('id', allergyId);
+
+      if (error) {
+        console.error('Error deleting allergy:', error);
+        throw error;
+      }
     } catch (error) {
-      console.error('Error deleting allergy:', error);
+      console.error('Error in deleteAllergy:', error);
       throw error;
     }
   }

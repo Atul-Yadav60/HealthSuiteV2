@@ -12,7 +12,7 @@ import {
 import { GlassCard } from "../../components/ui/GlassCard";
 import { GradientButton } from "../../components/ui/GradientButton";
 import MessageModal from "../../components/ui/MessageModal";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useAuth } from "../../hooks/useAuth";
 import { useColorScheme } from "../../hooks/useColorScheme";
 import { parsePrescriptionText } from "../../services/OCRAdapter";
@@ -20,7 +20,7 @@ import { supabase } from "../../utils/supabase";
 
 export default function PrescriptionResultScreen() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const { imageUri, text } = useLocalSearchParams<{
     imageUri: string;
     text: string;

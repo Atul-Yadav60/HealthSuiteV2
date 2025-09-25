@@ -1,51 +1,69 @@
 import { supabase } from '../lib/supabase';
 
-export interface ConditionUpdate {
+export interface ConditionItem {
   id: string;
   user_id: string;
-  condition_name: string;
-  category: 'chronic' | 'acute' | 'mental-health' | 'other';
+  name: string;
+  category: 'chronic' | 'acute' | 'mental_health' | 'genetic' | 'autoimmune' | 'other';
+  severity: 'mild' | 'moderate' | 'severe' | 'critical';
   status: 'active' | 'managed' | 'resolved' | 'monitoring';
-  severity: 'mild' | 'moderate' | 'severe';
-  description: string;
+  description?: string;
   symptoms?: string[];
-  triggers?: string[];
   medications?: string[];
   notes?: string;
-  diagnosed_date?: string;
+  diagnosis_date?: string;
+  onset_date?: string;
   last_flare_date?: string;
-  next_appointment?: string;
+  treatment_plan?: string;
   doctor_name?: string;
+  next_appointment?: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
 
-export interface ConditionStats {
-  total: number;
-  active: number;
-  managed: number;
-  resolved: number;
-  byCategory: Record<string, number>;
-  bySeverity: Record<string, number>;
+export interface CreateConditionData {
+  name: string;
+  category: ConditionItem['category'];
+  severity: ConditionItem['severity'];
+  status: ConditionItem['status'];
+  description?: string;
+  symptoms?: string[];
+  medications?: string[];
+  notes?: string;
+  diagnosis_date?: string;
+  onset_date?: string;
+  last_flare_date?: string;
+  treatment_plan?: string;
+  doctor_name?: string;
+  next_appointment?: string;
+}
+
+export interface UpdateConditionData extends Partial<CreateConditionData> {
+  // All fields are optional for updates
 }
 
 export class ConditionsService {
   /**
-   * Get all conditions for a user
+   * Get all active conditions for a user
    */
-  static async getUserConditions(userId: string): Promise<ConditionUpdate[]> {
+  static async getUserConditions(userId: string): Promise<ConditionItem[]> {
     try {
       const { data, error } = await supabase
-        .from('condition_updates')
+        .from('conditions')
         .select('*')
         .eq('user_id', userId)
-        .order('updated_at', { ascending: false });
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching user conditions:', error);
+        throw new Error(`Failed to fetch conditions: ${error.message}`);
+      }
 
       return data || [];
     } catch (error) {
-      console.error('Error fetching conditions:', error);
+      console.error('Error in getUserConditions:', error);
       throw error;
     }
   }
@@ -53,25 +71,28 @@ export class ConditionsService {
   /**
    * Get a specific condition by ID
    */
-  static async getCondition(userId: string, conditionId: string): Promise<ConditionUpdate | null> {
+  static async getConditionById(conditionId: string, userId: string): Promise<ConditionItem | null> {
     try {
       const { data, error } = await supabase
-        .from('condition_updates')
+        .from('conditions')
         .select('*')
-        .eq('user_id', userId)
         .eq('id', conditionId)
+        .eq('user_id', userId)
+        .eq('is_active', true)
         .single();
 
       if (error) {
         if (error.code === 'PGRST116') {
-          return null; // No condition found
+          // No rows found
+          return null;
         }
-        throw error;
+        console.error('Error fetching condition:', error);
+        throw new Error(`Failed to fetch condition: ${error.message}`);
       }
 
       return data;
     } catch (error) {
-      console.error('Error fetching condition:', error);
+      console.error('Error in getConditionById:', error);
       throw error;
     }
   }
@@ -79,23 +100,33 @@ export class ConditionsService {
   /**
    * Create a new condition
    */
-  static async createCondition(condition: Omit<ConditionUpdate, 'id' | 'created_at' | 'updated_at'>): Promise<ConditionUpdate> {
+  static async createCondition(
+    userId: string,
+    conditionData: CreateConditionData
+  ): Promise<ConditionItem> {
     try {
+      // Validate required fields
+      if (!conditionData.name?.trim()) {
+        throw new Error('Condition name is required');
+      }
+
       const { data, error } = await supabase
-        .from('condition_updates')
+        .from('conditions')
         .insert({
-          ...condition,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          user_id: userId,
+          ...conditionData,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating condition:', error);
+        throw new Error(`Failed to create condition: ${error.message}`);
+      }
 
       return data;
     } catch (error) {
-      console.error('Error creating condition:', error);
+      console.error('Error in createCondition:', error);
       throw error;
     }
   }
@@ -104,41 +135,59 @@ export class ConditionsService {
    * Update an existing condition
    */
   static async updateCondition(
-    userId: string, 
-    conditionId: string, 
-    updates: Partial<Omit<ConditionUpdate, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
-  ): Promise<void> {
+    conditionId: string,
+    conditionData: UpdateConditionData
+  ): Promise<ConditionItem> {
     try {
-      const { error } = await supabase
-        .from('condition_updates')
+      // Remove undefined values to avoid overwriting with null
+      const cleanData = Object.entries(conditionData).reduce((acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as Record<string, any>);
+
+      const { data, error } = await supabase
+        .from('conditions')
         .update({
-          ...updates,
+          ...cleanData,
           updated_at: new Date().toISOString(),
         })
-        .eq('user_id', userId)
-        .eq('id', conditionId);
+        .eq('id', conditionId)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating condition:', error);
+        throw new Error(`Failed to update condition: ${error.message}`);
+      }
+
+      return data;
     } catch (error) {
-      console.error('Error updating condition:', error);
+      console.error('Error in updateCondition:', error);
       throw error;
     }
   }
 
   /**
-   * Delete a condition
+   * Soft delete a condition (mark as inactive)
    */
-  static async deleteCondition(userId: string, conditionId: string): Promise<void> {
+  static async deleteCondition(conditionId: string): Promise<void> {
     try {
       const { error } = await supabase
-        .from('condition_updates')
-        .delete()
-        .eq('user_id', userId)
+        .from('conditions')
+        .update({
+          is_active: false,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', conditionId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting condition:', error);
+        throw new Error(`Failed to delete condition: ${error.message}`);
+      }
     } catch (error) {
-      console.error('Error deleting condition:', error);
+      console.error('Error in deleteCondition:', error);
       throw error;
     }
   }
@@ -146,20 +195,27 @@ export class ConditionsService {
   /**
    * Get conditions by category
    */
-  static async getConditionsByCategory(userId: string): Promise<Record<string, ConditionUpdate[]>> {
+  static async getConditionsByCategory(
+    userId: string,
+    category: ConditionItem['category']
+  ): Promise<ConditionItem[]> {
     try {
-      const conditions = await this.getUserConditions(userId);
-      
-      return conditions.reduce((grouped, condition) => {
-        const category = condition.category;
-        if (!grouped[category]) {
-          grouped[category] = [];
-        }
-        grouped[category].push(condition);
-        return grouped;
-      }, {} as Record<string, ConditionUpdate[]>);
+      const { data, error } = await supabase
+        .from('conditions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('category', category)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching conditions by category:', error);
+        throw new Error(`Failed to fetch conditions: ${error.message}`);
+      }
+
+      return data || [];
     } catch (error) {
-      console.error('Error grouping conditions by category:', error);
+      console.error('Error in getConditionsByCategory:', error);
       throw error;
     }
   }
@@ -167,115 +223,67 @@ export class ConditionsService {
   /**
    * Get conditions by status
    */
-  static async getConditionsByStatus(userId: string): Promise<Record<string, ConditionUpdate[]>> {
+  static async getConditionsByStatus(
+    userId: string,
+    status: ConditionItem['status']
+  ): Promise<ConditionItem[]> {
     try {
-      const conditions = await this.getUserConditions(userId);
-      
-      return conditions.reduce((grouped, condition) => {
-        const status = condition.status;
-        if (!grouped[status]) {
-          grouped[status] = [];
-        }
-        grouped[status].push(condition);
-        return grouped;
-      }, {} as Record<string, ConditionUpdate[]>);
+      const { data, error } = await supabase
+        .from('conditions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', status)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching conditions by status:', error);
+        throw new Error(`Failed to fetch conditions: ${error.message}`);
+      }
+
+      return data || [];
     } catch (error) {
-      console.error('Error grouping conditions by status:', error);
+      console.error('Error in getConditionsByStatus:', error);
       throw error;
     }
   }
 
   /**
-   * Get condition statistics
+   * Get condition statistics for a user
    */
-  static async getConditionStats(userId: string): Promise<ConditionStats> {
+  static async getConditionStats(userId: string): Promise<{
+    total: number;
+    byCategory: Record<string, number>;
+    byStatus: Record<string, number>;
+    bySeverity: Record<string, number>;
+  }> {
     try {
       const conditions = await this.getUserConditions(userId);
-      
-      const byCategory = conditions.reduce((stats, condition) => {
-        stats[condition.category] = (stats[condition.category] || 0) + 1;
-        return stats;
-      }, {} as Record<string, number>);
 
-      const bySeverity = conditions.reduce((stats, condition) => {
-        stats[condition.severity] = (stats[condition.severity] || 0) + 1;
-        return stats;
-      }, {} as Record<string, number>);
-
-      const active = conditions.filter(c => c.status === 'active').length;
-      const managed = conditions.filter(c => c.status === 'managed').length;
-      const resolved = conditions.filter(c => c.status === 'resolved').length;
-
-      return {
+      const stats = {
         total: conditions.length,
-        active,
-        managed,
-        resolved,
-        byCategory,
-        bySeverity,
+        byCategory: {} as Record<string, number>,
+        byStatus: {} as Record<string, number>,
+        bySeverity: {} as Record<string, number>,
       };
-    } catch (error) {
-      console.error('Error getting condition stats:', error);
-      throw error;
-    }
-  }
 
-  /**
-   * Search conditions by name or symptoms
-   */
-  static async searchConditions(userId: string, query: string): Promise<ConditionUpdate[]> {
-    try {
-      const conditions = await this.getUserConditions(userId);
-      const searchTerm = query.toLowerCase();
-      
-      return conditions.filter(condition => 
-        condition.condition_name.toLowerCase().includes(searchTerm) ||
-        condition.description.toLowerCase().includes(searchTerm) ||
-        (condition.symptoms && condition.symptoms.some(symptom => 
-          symptom.toLowerCase().includes(searchTerm)
-        )) ||
-        (condition.notes && condition.notes.toLowerCase().includes(searchTerm))
-      );
-    } catch (error) {
-      console.error('Error searching conditions:', error);
-      throw error;
-    }
-  }
+      conditions.forEach((condition) => {
+        // Count by category
+        stats.byCategory[condition.category] = 
+          (stats.byCategory[condition.category] || 0) + 1;
 
-  /**
-   * Get active conditions requiring attention (e.g., upcoming appointments, severe status)
-   */
-  static async getConditionsRequiringAttention(userId: string): Promise<ConditionUpdate[]> {
-    try {
-      const conditions = await this.getUserConditions(userId);
-      const today = new Date();
-      const nextWeek = new Date();
-      nextWeek.setDate(today.getDate() + 7);
+        // Count by status
+        stats.byStatus[condition.status] = 
+          (stats.byStatus[condition.status] || 0) + 1;
 
-      return conditions.filter(condition => {
-        // Active conditions with severe status
-        if (condition.status === 'active' && condition.severity === 'severe') {
-          return true;
-        }
-
-        // Conditions with upcoming appointments within a week
-        if (condition.next_appointment) {
-          const appointmentDate = new Date(condition.next_appointment);
-          return appointmentDate >= today && appointmentDate <= nextWeek;
-        }
-
-        // Conditions with recent flare-ups (within last 3 days)
-        if (condition.last_flare_date) {
-          const flareDate = new Date(condition.last_flare_date);
-          const threeDaysAgo = new Date();
-          threeDaysAgo.setDate(today.getDate() - 3);
-          return flareDate >= threeDaysAgo;
-        }
-
-        return false;
+        // Count by severity
+        stats.bySeverity[condition.severity] = 
+          (stats.bySeverity[condition.severity] || 0) + 1;
       });
+
+      return stats;
     } catch (error) {
-      console.error('Error getting conditions requiring attention:', error);
+      console.error('Error in getConditionStats:', error);
       throw error;
     }
   }
@@ -284,14 +292,30 @@ export class ConditionsService {
    * Update condition status
    */
   static async updateConditionStatus(
-    userId: string, 
-    conditionId: string, 
-    status: ConditionUpdate['status']
-  ): Promise<void> {
+    userId: string,
+    conditionId: string,
+    status: ConditionItem['status']
+  ): Promise<ConditionItem> {
     try {
-      await this.updateCondition(userId, conditionId, { status });
+      const { data, error } = await supabase
+        .from('conditions')
+        .update({
+          status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conditionId)
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating condition status:', error);
+        throw new Error(`Failed to update condition status: ${error.message}`);
+      }
+
+      return data;
     } catch (error) {
-      console.error('Error updating condition status:', error);
+      console.error('Error in updateConditionStatus:', error);
       throw error;
     }
   }
@@ -300,30 +324,33 @@ export class ConditionsService {
    * Log a flare-up for a condition
    */
   static async logFlareUp(
-    userId: string, 
-    conditionId: string, 
-    flareDate?: string,
+    userId: string,
+    conditionId: string,
+    severity?: 'mild' | 'moderate' | 'severe' | 'critical',
     notes?: string
-  ): Promise<void> {
+  ): Promise<ConditionItem> {
     try {
-      const updates: Partial<ConditionUpdate> = {
-        last_flare_date: flareDate || new Date().toISOString(),
-        status: 'active', // Set to active when logging a flare-up
-      };
+      const { data, error } = await supabase
+        .from('conditions')
+        .update({
+          last_flare_date: new Date().toISOString(),
+          severity: severity || undefined,
+          notes: notes ? notes : undefined,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', conditionId)
+        .eq('user_id', userId)
+        .select()
+        .single();
 
-      if (notes) {
-        // Append to existing notes if any
-        const condition = await this.getCondition(userId, conditionId);
-        if (condition) {
-          const existingNotes = condition.notes || '';
-          const newNote = `[${new Date().toLocaleDateString()}] Flare-up: ${notes}`;
-          updates.notes = existingNotes ? `${existingNotes}\n\n${newNote}` : newNote;
-        }
+      if (error) {
+        console.error('Error logging flare-up:', error);
+        throw new Error(`Failed to log flare-up: ${error.message}`);
       }
 
-      await this.updateCondition(userId, conditionId, updates);
+      return data;
     } catch (error) {
-      console.error('Error logging flare-up:', error);
+      console.error('Error in logFlareUp:', error);
       throw error;
     }
   }

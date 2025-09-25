@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 32,
   },
   greeting: {
-    paddingTop:12,
+    paddingTop: 12,
     fontSize: 28,
     fontWeight: "bold",
     marginBottom: 4,

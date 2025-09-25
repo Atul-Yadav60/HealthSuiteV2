@@ -10,6 +10,7 @@ import {
   StyleProp,
 } from "react-native";
 import Colors, { glassmorphism } from "../../constants/Colors";
+import DefaultColors from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 interface GlassCardProps {
@@ -38,7 +39,7 @@ export function GlassCard({
   elevation = 8,
 }: GlassCardProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
   const glass = glassmorphism[colorScheme ?? "dark"];
 
   // Animations

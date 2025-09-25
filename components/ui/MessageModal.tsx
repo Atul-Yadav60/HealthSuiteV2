@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useColorScheme } from "../../hooks/useColorScheme";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { GlassCard } from "./GlassCard";
 import { GradientButton } from "./GradientButton";
 
@@ -30,7 +30,7 @@ export default function MessageModal({
   type = "error",
 }: MessageModalProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme] || Colors;
   const iconName =
     type === "success"
       ? "checkmark-circle"

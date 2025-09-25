@@ -36,7 +36,11 @@ import { WarningScroller } from "../../components/ui/WarningScroller";
 import { GlassCard } from "../../components/ui/GlassCard";
 import { QuickActionButton } from "../../components/ui/QuickActionButton";
 import { MOCK_DATA, MODULES, QUICK_ACTIONS } from "../../constants/AppConfig";
-import DefaultColors, { gradients, moduleColors, Colors } from "../../constants/Colors";
+import DefaultColors, {
+  gradients,
+  moduleColors,
+  Colors,
+} from "../../constants/Colors";
 
 const { width } = Dimensions.get("window");
 

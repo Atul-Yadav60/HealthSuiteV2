@@ -12,7 +12,7 @@ import Animated, {
   runOnJS,
   clamp,
 } from "react-native-reanimated";
-import Colors from "../../constants/Colors";
+import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 interface CustomSliderProps {
@@ -41,7 +41,7 @@ export const CustomSlider: React.FC<CustomSliderProps> = ({
   disabled = false,
 }) => {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"] || Colors.light;
+  const colors = DefaultColors[colorScheme] || Colors;
 
   const trackHeight = 4;
   const thumbSize = 24;
@@ -177,7 +177,7 @@ export const SimpleSlider: React.FC<CustomSliderProps> = ({
   disabled = false,
 }) => {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "light"] || Colors.light;
+  const colors = DefaultColors[colorScheme] || Colors;
 
   const trackHeight = 4;
   const thumbSize = 24;

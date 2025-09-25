@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { ThemedView } from "../ThemedView";
 import { Ionicons } from "@expo/vector-icons";
-import Colors from "@/constants/Colors";
+import DefaultColors, { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
 const { width } = Dimensions.get("window");
@@ -34,7 +34,7 @@ const WarningItem = ({
   message: string;
 }) => {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme] || Colors;
   return (
     <View style={styles.warningItem}>
       <Ionicons
@@ -52,7 +52,7 @@ const WarningItem = ({
 
 export function WarningScroller({ warnings }: WarningScrollerProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme] || Colors;
   const scrollX = useRef(new Animated.Value(0)).current;
 
   // Create multiple copies for truly infinite scroll

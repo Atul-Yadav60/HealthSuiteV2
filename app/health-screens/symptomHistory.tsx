@@ -530,7 +530,7 @@ export default function SymptomHistoryScreen() {
         {/* Add New Log Button */}
         <TouchableOpacity
           style={[styles.addLogButton, { backgroundColor: colors.primary }]}
-          onPress={() => router.push("/health/logSymptoms")}
+          onPress={() => router.push("/health-screens/logSymptoms")}
         >
           <Ionicons name="add" size={24} color="white" />
           <Text style={styles.addLogButtonText}>Log New Symptoms</Text>

@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors, { gradients } from "../../constants/Colors";
+import DefaultColors from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
 
 interface GradientButtonProps {
@@ -44,7 +45,7 @@ export function GradientButton({
   icon,
 }: GradientButtonProps) {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? "dark"];
+  const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
 
   const getGradientColors = () => {
     if (Array.isArray(gradient)) return gradient;

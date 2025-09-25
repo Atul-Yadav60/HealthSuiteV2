@@ -287,14 +287,14 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingBottom: 30 },
   header: {
-    paddingTop:40,
+    paddingTop: 40,
     paddingBottom: 32,
     paddingHorizontal: 24,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
   greeting: {
-    paddingTop:12,
+    paddingTop: 12,
     fontSize: 28,
     fontWeight: "bold",
     marginBottom: 4,

@@ -12,7 +12,7 @@ import {
   Alert,
   StatusBar,
 } from "react-native";
-import { InfoCard } from "@/components/ui/InfoCard";
+import { GlassCard } from "@/components/ui/GlassCard";
 import { GradientButton } from "@/components/ui/GradientButton";
 import DefaultColors, { Colors } from "@/constants/Colors";
 import { useColorScheme } from "@/hooks/useColorScheme";
@@ -67,7 +67,7 @@ export default function DrugInteractionScreen() {
       >
         <View style={styles.content}>
           {/* Info Banner */}
-          <InfoCard style={styles.infoBanner}>
+          <GlassCard style={styles.infoBanner}>
             <View style={styles.bannerContent}>
               <Ionicons
                 name="information-circle"
@@ -82,10 +82,10 @@ export default function DrugInteractionScreen() {
                 and safety information.
               </Text>
             </View>
-          </InfoCard>
+          </GlassCard>
 
           {/* Input Section */}
-          <InfoCard>
+          <GlassCard>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Drug Query
             </Text>
@@ -111,11 +111,11 @@ export default function DrugInteractionScreen() {
               icon="search-outline"
               style={styles.checkButton}
             />
-          </InfoCard>
+          </GlassCard>
 
           {/* Results Section */}
           {results && (
-            <InfoCard>
+            <GlassCard>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>
                 Analysis Results
               </Text>
@@ -233,7 +233,7 @@ export default function DrugInteractionScreen() {
                   </Text>
                 </View>
               )}
-            </InfoCard>
+            </GlassCard>
           )}
         </View>
       </ScrollView>

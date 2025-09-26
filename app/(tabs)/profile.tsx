@@ -205,7 +205,15 @@ export default function ProfileScreen() {
             <QuickActionButton
               key={action.id}
               action={action}
-              onPress={() => alert(`${action.title} coming soon!`)}
+              onPress={() => {
+                if (action.id === "edit") {
+                  router.push("/(tabs)/editProfile");
+                } else if (action.id === "settings") {
+                  router.push("/(tabs)/settings");
+                } else {
+                  alert(`${action.title} coming soon!`);
+                }
+              }}
               style={styles.quickAction}
             />
           ))}

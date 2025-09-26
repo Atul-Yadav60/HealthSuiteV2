@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -7,12 +7,39 @@ import {
   TouchableOpacity,
   View,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { QuickActionButton } from "../../components/ui/QuickActionButton";
 import DefaultColors, { Colors } from "../../constants/Colors";
 import { useColorScheme } from "../../hooks/useColorScheme";
+import { useAuth } from "../../hooks/useAuth";
 import { ThemedText } from "../../components/ThemedText";
+import { DocumentUploadModal } from "../../components/DocumentUploadModal";
+
+interface HealthRecord {
+  id: string;
+  user_id: string;
+  display_name: string;
+  file_name: string;
+  category:
+    | "lab"
+    | "prescription"
+    | "imaging"
+    | "doctor_notes"
+    | "insurance"
+    | "general";
+  file_size?: number;
+  created_at: string;
+  is_favorite: boolean;
+  file_type: string;
+  mime_type?: string;
+  file_path: string;
+  storage_bucket: string;
+  is_active: boolean;
+  updated_at: string;
+}
 
 // Mock Data for Appointments & Records
 const APPOINTMENTS = [
@@ -84,14 +111,123 @@ const QUICK_ACTIONS = [
 export default function AppointmentsScreen() {
   const colorScheme = useColorScheme();
   const colors = DefaultColors[colorScheme ?? "dark"] || Colors;
+  const { user } = useAuth();
+
   const [refreshing, setRefreshing] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [recentRecords, setRecentRecords] = useState<HealthRecord[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+
+  const fetchRecentRecords = async () => {
+    if (!user) return;
+
+    try {
+      setLoadingRecords(true);
+
+      // For now, show mock data since database might not be ready
+      // TODO: Replace with actual service call when database is connected
+
+      // Simulate loading delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Mock recent records data
+      const mockRecords: HealthRecord[] = [
+        {
+          id: "mock-1",
+          user_id: user.id,
+          display_name: "Blood Test Results - September 2025",
+          file_name: "blood_test_sep_2025.pdf",
+          category: "lab",
+          file_size: 2048576, // 2MB
+          created_at: new Date().toISOString(),
+          is_favorite: true,
+          file_type: "pdf",
+          mime_type: "application/pdf",
+          file_path: `${user.id}/mock-file-1.pdf`,
+          storage_bucket: "health-records",
+          is_active: true,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: "mock-2",
+          user_id: user.id,
+          display_name: "Prescription - Medication Refill",
+          file_name: "prescription_refill.jpg",
+          category: "prescription",
+          file_size: 1024000, // 1MB
+          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
+          is_favorite: false,
+          file_type: "jpg",
+          mime_type: "image/jpeg",
+          file_path: `${user.id}/mock-file-2.jpg`,
+          storage_bucket: "health-records",
+          is_active: true,
+          updated_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        },
+      ];
+
+      setRecentRecords(mockRecords);
+    } catch (error) {
+      console.error("Error fetching recent records:", error);
+      setRecentRecords([]); // Set empty array on error
+    } finally {
+      setLoadingRecords(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecentRecords();
+  }, [user]);
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => {
+    fetchRecentRecords().finally(() => {
       setRefreshing(false);
-    }, 1500);
-  }, []);
+    });
+  }, [user]);
+
+  const handleQuickAction = (actionId: string) => {
+    switch (actionId) {
+      case "book":
+        Alert.alert(
+          "Coming Soon",
+          "Appointment booking feature will be available soon!"
+        );
+        break;
+      case "records":
+        router.push("/health-screens/health-records");
+        break;
+      case "upload":
+        setShowUploadModal(true);
+        break;
+      default:
+        Alert.alert("Coming Soon", `${actionId} feature coming soon!`);
+    }
+  };
+
+  const handleUploadSuccess = () => {
+    fetchRecentRecords(); // Refresh the recent records
+  };
+
+  const formatFileSize = (bytes: number | undefined): string => {
+    if (!bytes) return "Unknown size";
+
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i];
+  };
+
+  const getCategoryIcon = (category: string): string => {
+    const iconMap: Record<string, string> = {
+      lab: "flask-outline",
+      prescription: "medical-outline",
+      imaging: "scan-outline",
+      doctor_notes: "document-text-outline",
+      insurance: "shield-outline",
+      general: "folder-outline",
+    };
+    return iconMap[category] || "document-outline";
+  };
 
   return (
     <ScrollView
@@ -128,7 +264,7 @@ export default function AppointmentsScreen() {
             <QuickActionButton
               key={action.id}
               action={action}
-              onPress={() => alert(`${action.title} coming soon!`)}
+              onPress={() => handleQuickAction(action.id)}
               style={styles.quickAction}
             />
           ))}
@@ -184,46 +320,100 @@ export default function AppointmentsScreen() {
 
       {/* Recent Records */}
       <View style={styles.section}>
-        <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-          Recent Records
-        </ThemedText>
-        <View style={styles.cardsGrid}>
-          {RECORDS.map((record) => (
-            <View
-              key={record.id}
-              style={[styles.recordCard, { backgroundColor: colors.card }]}
-            >
-              <View style={styles.recordHeader}>
-                <Ionicons
-                  name="document-text-outline"
-                  size={24}
-                  color="#6366F1"
-                />
-                <View style={styles.recordInfo}>
-                  <ThemedText
-                    style={[styles.recordTitle, { color: colors.text }]}
-                  >
-                    {record.name}
-                  </ThemedText>
-                  <ThemedText
-                    style={[
-                      styles.recordSubtitle,
-                      { color: colors.onSurfaceVariant },
-                    ]}
-                  >
-                    {record.type}
-                  </ThemedText>
-                  <ThemedText
-                    style={[styles.recordDate, { color: colors.primary }]}
-                  >
-                    {record.date}
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          ))}
+        <View style={styles.sectionHeader}>
+          <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
+            Recent Records
+          </ThemedText>
+          <TouchableOpacity
+            onPress={() => router.push("/health-screens/health-records")}
+            style={styles.viewAllButton}
+          >
+            <ThemedText style={[styles.viewAllText, { color: colors.primary }]}>
+              View All
+            </ThemedText>
+          </TouchableOpacity>
         </View>
+
+        {loadingRecords ? (
+          <View style={styles.loadingContainer}>
+            <ThemedText
+              style={[styles.loadingText, { color: colors.textSecondary }]}
+            >
+              Loading recent records...
+            </ThemedText>
+          </View>
+        ) : recentRecords.length > 0 ? (
+          <View style={styles.cardsGrid}>
+            {recentRecords.map((record) => (
+              <TouchableOpacity
+                key={record.id}
+                style={[styles.recordCard, { backgroundColor: colors.card }]}
+                onPress={() =>
+                  router.push(`/health-screens/record-details/${record.id}`)
+                }
+              >
+                <View style={styles.recordHeader}>
+                  <Ionicons
+                    name={getCategoryIcon(record.category) as any}
+                    size={24}
+                    color="#6366F1"
+                  />
+                  <View style={styles.recordInfo}>
+                    <ThemedText
+                      style={[styles.recordTitle, { color: colors.text }]}
+                    >
+                      {record.display_name}
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.recordSubtitle,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {record.category.charAt(0).toUpperCase() +
+                        record.category.slice(1)}{" "}
+                      • {formatFileSize(record.file_size)}
+                    </ThemedText>
+                    <ThemedText
+                      style={[styles.recordDate, { color: colors.primary }]}
+                    >
+                      {new Date(record.created_at).toLocaleDateString()}
+                    </ThemedText>
+                  </View>
+                  {record.is_favorite && (
+                    <Ionicons name="heart" size={16} color="#EF4444" />
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons
+              name="document-outline"
+              size={48}
+              color={colors.textSecondary}
+            />
+            <ThemedText
+              style={[styles.emptyText, { color: colors.textSecondary }]}
+            >
+              No recent records
+            </ThemedText>
+            <ThemedText
+              style={[styles.emptySubtext, { color: colors.textSecondary }]}
+            >
+              Upload your first health document to get started
+            </ThemedText>
+          </View>
+        )}
       </View>
+
+      {/* Document Upload Modal */}
+      <DocumentUploadModal
+        visible={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUploadSuccess={handleUploadSuccess}
+      />
     </ScrollView>
   );
 }
@@ -334,5 +524,43 @@ const styles = StyleSheet.create({
   recordDate: {
     fontSize: 14,
     fontWeight: "600",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  viewAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "rgba(99, 102, 241, 0.1)",
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    alignItems: "center",
+    paddingVertical: 32,
+  },
+  loadingText: {
+    fontSize: 16,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: "center",
+    paddingHorizontal: 32,
   },
 });

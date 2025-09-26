@@ -22,7 +22,7 @@ import { useColorScheme } from "../../hooks/useColorScheme";
 
 const { width } = Dimensions.get("window");
 
-export default function SkinScanScreen() {
+export default function TrustMedScreen() {
   const colorScheme = useColorScheme();
   const colors = DefaultColors[colorScheme ?? "light"] || Colors;
 
@@ -60,78 +60,111 @@ export default function SkinScanScreen() {
     // Simulate refresh
     setTimeout(() => {
       setRefreshing(false);
-      Alert.alert("Refreshed", "Latest skin analysis features loaded!");
+      Alert.alert("Refreshed", "Latest TrustMed.AI features loaded!");
     }, 1500);
   }, []);
 
-  const scanFeatures = [
+  const mainFeatures = [
     {
-      id: "1",
-      title: "AI Skin Analysis",
-      icon: "scan-outline",
-      gradient: ["#4CAF50", "#45A049"],
-      description: "Advanced AI-powered skin condition analysis",
-      value: "Smart",
-      unit: "Detection",
+      id: "prescription",
+      title: "Prescription Verification",
+      icon: "document-text-outline",
+      gradient: ["#6366F1", "#4F46E5"],
+      description:
+        "Scan and verify prescription authenticity with AI-powered OCR",
+      value: "AI",
+      unit: "Powered",
+      route: "/(tabs)/prescriptionScanner",
     },
     {
-      id: "2",
-      title: "Instant Results",
-      icon: "flash-outline",
-      gradient: ["#FF9800", "#F57C00"],
-      description: "Get immediate insights and recommendations",
-      value: "Real-time",
-      unit: "Results",
+      id: "authenticity",
+      title: "Medicine Authenticity",
+      icon: "shield-checkmark-outline",
+      gradient: ["#10B981", "#059669"],
+      description:
+        "Verify medication authenticity and detect counterfeit drugs",
+      value: "Secure",
+      unit: "Verify",
+      route: null, // Coming soon
     },
     {
-      id: "3",
-      title: "History Tracking",
-      icon: "time-outline",
-      gradient: ["#2196F3", "#1976D2"],
-      description: "Track changes and progress over time",
-      value: "Track",
-      unit: "Progress",
-    },
-    {
-      id: "4",
-      title: "Expert Guidance",
-      icon: "medical-outline",
-      gradient: ["#9C27B0", "#7B1FA2"],
-      description: "Professional recommendations and advice",
-      value: "Pro",
-      unit: "Guidance",
+      id: "interaction",
+      title: "Drug Interactions",
+      icon: "git-compare-outline",
+      gradient: ["#F59E0B", "#D97706"],
+      description: "Check for dangerous drug interactions and side effects",
+      value: "Safety",
+      unit: "Check",
+      route: "/(tabs)/drugInteraction",
     },
   ];
 
   const quickActions = [
     {
-      id: "start-scan",
-      icon: "camera-outline",
-      label: "Start Scan",
-      gradient: ["#4CAF50", "#45A049"],
-      onPress: () =>
-        Alert.alert(
-          "Coming Soon",
-          "AI skin scanning will be available in the next update!"
-        ),
+      id: "scan-prescription",
+      icon: "scan-outline",
+      label: "Scan Rx",
+      gradient: ["#6366F1", "#4F46E5"],
+      onPress: () => router.push("/(tabs)/prescriptionScanner"),
     },
     {
-      id: "view-history",
-      icon: "library-outline",
-      label: "View History",
-      gradient: ["#2196F3", "#1976D2"],
+      id: "verify-medicine",
+      icon: "shield-outline",
+      label: "Verify Med",
+      gradient: ["#10B981", "#059669"],
       onPress: () =>
-        Alert.alert("Coming Soon", "Scan history feature coming soon!"),
+        Alert.alert("Coming Soon", "Medicine authenticity check coming soon!"),
     },
     {
-      id: "expert-tips",
-      icon: "bulb-outline",
-      label: "Expert Tips",
-      gradient: ["#FF9800", "#F57C00"],
-      onPress: () =>
-        Alert.alert("Coming Soon", "Expert skincare tips coming soon!"),
+      id: "check-interactions",
+      icon: "warning-outline",
+      label: "Check Safety",
+      gradient: ["#F59E0B", "#D97706"],
+      onPress: () => router.push("/(tabs)/drugInteraction"),
     },
   ];
+
+  const securityStats = [
+    {
+      icon: "shield-checkmark-outline",
+      label: "Verified",
+      value: "99.8%",
+      unit: "Accuracy",
+      gradient: ["#10B981", "#059669"],
+    },
+    {
+      icon: "document-text-outline",
+      label: "Prescriptions",
+      value: "50K+",
+      unit: "Scanned",
+      gradient: ["#6366F1", "#4F46E5"],
+    },
+    {
+      icon: "warning-outline",
+      label: "Interactions",
+      value: "2.5K+",
+      unit: "Prevented",
+      gradient: ["#F59E0B", "#D97706"],
+    },
+    {
+      icon: "medical-outline",
+      label: "Medications",
+      value: "10K+",
+      unit: "Database",
+      gradient: ["#8B5CF6", "#7C3AED"],
+    },
+  ];
+
+  const handleFeaturePress = (feature: (typeof mainFeatures)[0]) => {
+    if (feature.route) {
+      router.push(feature.route as any);
+    } else {
+      Alert.alert(
+        "Coming Soon",
+        `${feature.title} will be available in the next update!`
+      );
+    }
+  };
 
   return (
     <ScrollView
@@ -149,7 +182,7 @@ export default function SkinScanScreen() {
     >
       {/* Header */}
       <LinearGradient
-        colors={gradients.premium}
+        colors={["#8A6CFF", "#6366F1"]} // Purple gradient for TrustMed branding
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -167,15 +200,15 @@ export default function SkinScanScreen() {
             <Ionicons name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
-            <Text style={styles.greeting}>Skin AI Scanner ✨</Text>
+            <Text style={styles.greeting}>TrustMed.AI 🛡️</Text>
             <Text style={styles.subtitle}>
-              AI-powered skin analysis and guidance
+              Medicine verification & safety platform
             </Text>
           </View>
         </Animated.View>
       </LinearGradient>
 
-      {/* Stats Cards Row */}
+      {/* Security Stats Cards */}
       <Animated.View
         style={[
           styles.section,
@@ -187,34 +220,34 @@ export default function SkinScanScreen() {
       >
         <View style={styles.cardRow}>
           <InfoCard
-            icon="scan-outline"
-            label="AI Analysis"
-            value="Smart"
-            unit="Detection"
-            gradient={["#4CAF50", "#45A049"]}
+            icon="shield-checkmark-outline"
+            label="Accuracy"
+            value="99.8%"
+            unit="Verified"
+            gradient={["#10B981", "#059669"]}
           />
           <InfoCard
-            icon="flash-outline"
-            label="Results"
-            value="Instant"
-            unit="Analysis"
-            gradient={["#FF9800", "#F57C00"]}
+            icon="document-text-outline"
+            label="Scanned"
+            value="50K+"
+            unit="Prescriptions"
+            gradient={["#6366F1", "#4F46E5"]}
           />
         </View>
         <View style={styles.cardRow}>
           <InfoCard
-            icon="time-outline"
-            label="Tracking"
-            value="Progress"
-            unit="History"
-            gradient={["#2196F3", "#1976D2"]}
+            icon="warning-outline"
+            label="Safety"
+            value="2.5K+"
+            unit="Prevented"
+            gradient={["#F59E0B", "#D97706"]}
           />
           <InfoCard
             icon="medical-outline"
-            label="Expert"
-            value="Pro"
-            unit="Guidance"
-            gradient={["#9C27B0", "#7B1FA2"]}
+            label="Database"
+            value="10K+"
+            unit="Medications"
+            gradient={["#8B5CF6", "#7C3AED"]}
           />
         </View>
       </Animated.View>
@@ -251,51 +284,7 @@ export default function SkinScanScreen() {
         </View>
       </Animated.View>
 
-      {/* Coming Soon Banner */}
-      <Animated.View
-        style={[
-          styles.section,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-        ]}
-      >
-        <GlassCard style={styles.bannerCard} animated={true}>
-          <View style={styles.bannerContent}>
-            <Ionicons
-              name="construct-outline"
-              size={48}
-              color={colors.primary}
-              style={styles.bannerIcon}
-            />
-            <Text style={[styles.bannerTitle, { color: colors.text }]}>
-              Advanced AI Coming Soon
-            </Text>
-            <Text
-              style={[
-                styles.bannerDescription,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              We're developing cutting-edge AI technology to help you analyze
-              skin conditions using your device camera. Get ready for
-              professional-grade skin analysis at your fingertips.
-            </Text>
-            <TouchableOpacity
-              style={[styles.notifyButton, { backgroundColor: colors.primary }]}
-              onPress={() =>
-                Alert.alert(
-                  "Notifications",
-                  "You'll be notified when Skin AI Scanner is available!"
-                )
-              }
-            >
-              <Ionicons name="notifications-outline" size={20} color="white" />
-              <Text style={styles.notifyButtonText}>Notify Me</Text>
-            </TouchableOpacity>
-          </View>
-        </GlassCard>
-      </Animated.View>
-
-      {/* How it Works */}
+      {/* Main Features */}
       <Animated.View
         style={[
           styles.section,
@@ -303,64 +292,93 @@ export default function SkinScanScreen() {
         ]}
       >
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          How It Will Work
+          Core Features
+        </Text>
+        <View style={styles.featuresContainer}>
+          {mainFeatures.map((feature, index) => (
+            <TouchableOpacity
+              key={feature.id}
+              style={styles.featureCard}
+              onPress={() => handleFeaturePress(feature)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={feature.gradient}
+                style={styles.featureGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <View style={styles.featureContent}>
+                  <View style={styles.featureIconContainer}>
+                    <Ionicons
+                      name={feature.icon as any}
+                      size={32}
+                      color="white"
+                    />
+                  </View>
+                  <Text style={styles.featureTitle}>{feature.title}</Text>
+                  <Text style={styles.featureDescription}>
+                    {feature.description}
+                  </Text>
+                  <View style={styles.featureAction}>
+                    <Ionicons name="arrow-forward" size={20} color="white" />
+                  </View>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </Animated.View>
+
+      {/* Trust & Security */}
+      <Animated.View
+        style={[
+          styles.section,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Trust & Security
         </Text>
         <GlassCard animated={true}>
-          <View style={styles.stepsContainer}>
-            <View style={styles.step}>
-              <View
-                style={[styles.stepNumber, { backgroundColor: colors.primary }]}
-              >
-                <Text style={styles.stepNumberText}>1</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepTitle, { color: colors.text }]}>
-                  Capture Photo
-                </Text>
-                <Text
-                  style={[styles.stepText, { color: colors.onSurfaceVariant }]}
-                >
-                  Take a clear photo of the skin area you want to analyze
-                </Text>
-              </View>
+          <View style={styles.trustContent}>
+            <View style={styles.trustHeader}>
+              <Ionicons
+                name="shield-checkmark"
+                size={40}
+                color={colors.primary}
+              />
+              <Text style={[styles.trustTitle, { color: colors.text }]}>
+                Medical Grade Security
+              </Text>
             </View>
-
-            <View style={styles.stepDivider} />
-
-            <View style={styles.step}>
-              <View
-                style={[styles.stepNumber, { backgroundColor: colors.primary }]}
-              >
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepTitle, { color: colors.text }]}>
-                  AI Analysis
-                </Text>
-                <Text
-                  style={[styles.stepText, { color: colors.onSurfaceVariant }]}
-                >
-                  Advanced AI analyzes patterns, textures, and characteristics
+            <View style={styles.trustFeatures}>
+              <View style={styles.trustFeature}>
+                <Ionicons name="lock-closed" size={20} color={colors.primary} />
+                <Text style={[styles.trustFeatureText, { color: colors.text }]}>
+                  End-to-end encryption
                 </Text>
               </View>
-            </View>
-
-            <View style={styles.stepDivider} />
-
-            <View style={styles.step}>
-              <View
-                style={[styles.stepNumber, { backgroundColor: colors.primary }]}
-              >
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-              <View style={styles.stepContent}>
-                <Text style={[styles.stepTitle, { color: colors.text }]}>
-                  Get Results
+              <View style={styles.trustFeature}>
+                <Ionicons name="medical" size={20} color={colors.primary} />
+                <Text style={[styles.trustFeatureText, { color: colors.text }]}>
+                  FDA compliant verification
                 </Text>
-                <Text
-                  style={[styles.stepText, { color: colors.onSurfaceVariant }]}
-                >
-                  Receive detailed analysis and professional recommendations
+              </View>
+              <View style={styles.trustFeature}>
+                <Ionicons name="eye-off" size={20} color={colors.primary} />
+                <Text style={[styles.trustFeatureText, { color: colors.text }]}>
+                  No data stored locally
+                </Text>
+              </View>
+              <View style={styles.trustFeature}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={20}
+                  color={colors.primary}
+                />
+                <Text style={[styles.trustFeatureText, { color: colors.text }]}>
+                  Real-time verification
                 </Text>
               </View>
             </View>
@@ -389,9 +407,9 @@ export default function SkinScanScreen() {
             <Text
               style={[styles.safetyText, { color: colors.onSurfaceVariant }]}
             >
-              This AI tool is for informational purposes only and should not
-              replace professional medical advice. Always consult a healthcare
-              provider for medical concerns.
+              TrustMed.AI is a verification tool for informational purposes
+              only. Always consult healthcare professionals for medical
+              decisions and never ignore professional medical advice.
             </Text>
           </View>
         </View>
@@ -476,79 +494,71 @@ const styles = StyleSheet.create({
     color: "white",
     textAlign: "center",
   },
-  bannerCard: {
-    alignItems: "center",
-    padding: 24,
+  featuresContainer: {
+    gap: 16,
   },
-  bannerContent: {
-    alignItems: "center",
-    width: "100%",
-  },
-  bannerIcon: {
-    marginBottom: 16,
-  },
-  bannerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  bannerDescription: {
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  notifyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-    gap: 8,
-  },
-  notifyButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "white",
-  },
-  stepsContainer: {
-    width: "100%",
-  },
-  step: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: 16,
-  },
-  stepNumber: {
-    width: 40,
-    height: 40,
+  featureCard: {
+    height: 140,
     borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
+    overflow: "hidden",
   },
-  stepNumberText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
+  featureGradient: {
+    flex: 1,
+    padding: 20,
+    justifyContent: "space-between",
   },
-  stepContent: {
+  featureContent: {
     flex: 1,
   },
-  stepTitle: {
+  featureIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  featureTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 4,
+    color: "white",
+    marginBottom: 8,
   },
-  stepText: {
+  featureDescription: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    lineHeight: 20,
+    flex: 1,
+  },
+  featureAction: {
+    alignSelf: "flex-end",
+    marginTop: 8,
+  },
+  trustContent: {
+    padding: 4,
+  },
+  trustHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    gap: 12,
+  },
+  trustTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  trustFeatures: {
+    gap: 12,
+  },
+  trustFeature: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  trustFeatureText: {
     fontSize: 14,
     lineHeight: 20,
-  },
-  stepDivider: {
-    height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    marginVertical: 8,
   },
   safetyNotice: {
     flexDirection: "row",

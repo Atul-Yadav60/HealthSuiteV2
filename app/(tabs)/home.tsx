@@ -200,6 +200,12 @@ export default function HomeScreen() {
   const handleModulePress = (moduleId: string) => {
     if (moduleId === "medPlanner") {
       router.push("/(tabs)/medPlanner");
+    } else if (moduleId === "skinAI") {
+      router.push("/(tabs)/skinScan");
+    } else if (moduleId === "trustMed") {
+      router.push("/(tabs)/trustMed");
+    } else if (moduleId === "symptoCare") {
+      router.push("/(tabs)/symptoCare");
     } else {
       router.push(`/modules/${moduleId}`);
     }
@@ -269,7 +275,7 @@ export default function HomeScreen() {
       }
     >
       <LinearGradient
-        colors={gradients.premium}
+        colors={["#4F46E5", "#7C3AED", "#EC4899"]}
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -280,22 +286,33 @@ export default function HomeScreen() {
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <View style={styles.greetingContainer}>
-            <Text style={[styles.greeting, { color: colors.text }]}>
-              Good morning, {session ? MOCK_DATA.user.name : "Guest"} ✨
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.onSurfaceVariant }]}>
-              Ready to take care of your health today?
-            </Text>
+          {/* App Name */}
+          <View style={styles.appNameContainer}>
+            <Text style={styles.appName}>Aarogya AI</Text>
+            <View style={styles.appNameUnderline} />
           </View>
+
+          {/* User Profile Icon */}
           <TouchableOpacity
             style={styles.profileButton}
             onPress={() => router.push("/(tabs)/profile")}
+            activeOpacity={0.8}
           >
-            <Image
-              source={{ uri: MOCK_DATA.user.avatar }}
-              style={styles.avatar}
-            />
+            <LinearGradient
+              colors={["#10B981", "#059669"]}
+              style={styles.profileGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              {MOCK_DATA?.user?.avatar ? (
+                <Image
+                  source={{ uri: MOCK_DATA.user.avatar }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <Ionicons name="person" size={28} color="#FFFFFF" />
+              )}
+            </LinearGradient>
             <View style={styles.onlineIndicator} />
           </TouchableOpacity>
         </Animated.View>
@@ -540,38 +557,86 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   contentContainer: { paddingBottom: 60 },
   header: {
-    paddingTop: 50,
-    paddingBottom: 10,
+    paddingTop: 45,
+    paddingBottom: 16,
     paddingHorizontal: 24,
-    borderBottomLeftRadius: 32,
-    borderBottomRightRadius: 32,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
   },
   headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  greetingContainer: { flex: 1 },
-  greeting: { fontSize: 28, fontWeight: "bold", marginBottom: 4 },
-  subtitle: { fontSize: 16, opacity: 0.9 },
-  profileButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    overflow: "hidden",
-    position: "relative",
+  appNameContainer: {
+    alignItems: "flex-start",
   },
-  avatar: { width: "100%", height: "100%" },
+  appName: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 1,
+    textShadowColor: "rgba(0, 0, 0, 0.3)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  appNameUnderline: {
+    width: 40,
+    height: 3,
+    backgroundColor: "#FBBF24",
+    borderRadius: 2,
+    marginTop: 6,
+    shadowColor: "#FBBF24",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  profileButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  profileGradient: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.4)",
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
   onlineIndicator: {
     position: "absolute",
-    bottom: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: "#10B981",
-    borderWidth: 3,
+    bottom: 1,
+    right: 1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#FBBF24",
+    borderWidth: 2,
     borderColor: "#FFFFFF",
+    shadowColor: "#FBBF24",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 4,
   },
   section: { paddingHorizontal: 20, marginTop: 32 },
   sectionTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 16 },

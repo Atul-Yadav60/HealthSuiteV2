@@ -86,14 +86,14 @@ export const QUICK_ACTIONS: QuickAction[] = [
     id: "scanSkin",
     title: "Scan Skin",
     icon: "camera",
-    module: "/modules/skinAI",
+    module: "/(tabs)/skinScan",
     color: "#2EE6D6",
   },
   {
     id: "verifyRx",
     title: "Verify Rx",
     icon: "shield-checkmark",
-    module: "/modules/trustMed",
+    module: "/(tabs)/trustMed",
     color: "#8A6CFF",
   },
   {
@@ -148,6 +148,15 @@ export const MOCK_DATA = {
       "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
     region: "Mumbai",
     language: "en",
+    phone: "+91 98765 43210",
+    dateOfBirth: "1990-05-15",
+    gender: "Male",
+    bloodGroup: "O+",
+    height: "175",
+    weight: "70",
+    allergies: "None known",
+    emergencyContact: "+91 98765 43211",
+    address: "Andheri West, Mumbai, Maharashtra, India",
   },
   healthTips: [
     {

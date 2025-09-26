@@ -111,6 +111,8 @@ export default function HealthScreen() {
       router.push("/health-screens/allergies");
     } else if (categoryId === "conditions") {
       router.push("/health-screens/conditions");
+    } else if (categoryId === "records") {
+      router.push("/health-screens/health-records");
     } else {
       router.push("/health-screens/coming-soon");
     }
